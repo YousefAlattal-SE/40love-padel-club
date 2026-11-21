@@ -1,9 +1,6 @@
 import clubCourtCoffee from './assets/40love-court-coffee.jpeg'
 import clubCourtWalkway from './assets/40love-court-walkway.jpeg'
-import clubCourtsTerrace from './assets/40love-courts-terrace.jpeg'
-import clubLoungeInterior from './assets/40love-lounge-interior.jpeg'
 import clubExteriorSunset from './assets/40love-club-exterior-sunset.jpeg'
-import clubCourtsSunset from './assets/40love-courts-sunset.jpeg'
 import clubExteriorDay from './assets/40love-club-exterior-day.jpeg'
 
 export const FORTYLOVE_CONTENT = {
@@ -13,6 +10,7 @@ export const FORTYLOVE_CONTENT = {
   },
   contact: {
     address: 'Othman Naseef Street, Dahyet Al-Nakheel, Amman, Jordan',
+    addressAr: 'شارع عثمان نصيف، ضاحية النخيل، عمّان، الأردن',
     phone: '0791118877',
     phoneHref: 'tel:+962791118877',
     website: '40love.club',
@@ -50,7 +48,7 @@ export const FORTYLOVE_CONTENT = {
       label: { en: 'PADEL', ar: 'بـادل' },
       title: { en: 'Fast rallies.\nBetter nights.', ar: 'تبادلات أسرع.\nليالٍ أفضل.' },
       description: { en: 'Three premium panoramic courts for competitive games, social sessions, and everything in between.', ar: 'ثلاثة ملاعب بانورامية فاخرة للمنافسات والجلسات الاجتماعية وكل ما بينهما.' },
-      image: clubCourtsSunset,
+      image: clubCourtWalkway,
       features: { en: ['3 courts', 'Floodlit', 'Premium turf', 'Glass panoramic walls'], ar: ['٣ ملاعب', 'إضاءة ليلية', 'عشب فاخر', 'واجهات زجاجية بانورامية'] },
     },
   ],
@@ -82,13 +80,10 @@ export const FORTYLOVE_CONTENT = {
     { size: 'medium', icon: 'cup', enTitle: 'Café & lounge', arTitle: 'كافيه وصالة', en: 'Stay after the match. Meet the community.', ar: 'ابقَ بعد المباراة والتقِ بالمجتمع.' },
   ],
   gallery: [
-    { image: clubCourtsTerrace, alt: 'Panoramic Padel court and club terrace', altAr: 'ملعب بادل بانورامي وشرفة النادي' },
-    { image: clubCourtsSunset, alt: 'Padel courts at sunset', altAr: 'ملاعب البادل وقت الغروب' },
-    { image: clubLoungeInterior, alt: '40 Love cafe lounge interior', altAr: 'المنطقة الداخلية لمقهى 40 Love' },
-    { image: clubCourtWalkway, alt: 'Walkway between the Padel courts', altAr: 'الممر بين ملاعب البادل' },
-    { image: clubExteriorDay, alt: '40 Love Padel Club exterior in daylight', altAr: 'الواجهة الخارجية لنادي 40 Love نهارًا' },
-    { image: clubExteriorSunset, alt: '40 Love club terrace and sign at sunset', altAr: 'شرفة نادي 40 Love واللافتة وقت الغروب' },
-    { image: clubCourtCoffee, alt: '40 Love coffee beside the Padel court', altAr: 'قهوة 40 Love بجانب ملعب البادل' },
+    { image: clubCourtWalkway, caption: { en: 'Between courts', ar: 'بين الملاعب' }, position: '50% 54%', alt: 'Walkway between the Padel courts', altAr: 'الممر بين ملاعب البادل' },
+    { image: clubExteriorDay, caption: { en: 'The club entrance', ar: 'مدخل النادي' }, position: '50% 56%', alt: '40 Love Padel Club exterior in daylight', altAr: 'الواجهة الخارجية لنادي 40 Love نهارًا' },
+    { image: clubExteriorSunset, caption: { en: 'The terrace at dusk', ar: 'الشرفة عند الغروب' }, position: '50% 33%', alt: '40 Love club terrace and sign at sunset', altAr: 'شرفة نادي 40 Love واللافتة وقت الغروب' },
+    { image: clubCourtCoffee, caption: { en: 'Courtside coffee', ar: 'قهوة بجانب الملعب' }, position: '42% 52%', alt: '40 Love coffee beside the Padel court', altAr: 'قهوة 40 Love بجانب ملعب البادل' },
   ],
   testimonials: [
     { quote: { en: 'The late hours are a game changer. I can actually play after work without rushing.', ar: 'المواعيد الليلية غيّرت اللعبة. أقدر ألعب بعد الدوام بدون استعجال.' }, name: 'Omar K.', role: 'Padel member', rating: 5 },

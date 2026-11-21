@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#075E6B" />
     <meta name="application-name" content="40 Love Padel Club &amp; Cafe" />
     <meta name="apple-mobile-web-app-title" content="40 Love Padel Club &amp; Cafe" />
-    <meta name="description" content="40 Love Padel Club &amp; Cafe in Amman, Jordan — three premium floodlit padel courts, open daily from 7 AM until 3 AM." />
+    <meta name="description" content="Play padel at 40 LOVE in Dahyet Al-Nakheel, Amman. Three floodlit courts and a courtside café, open daily from 7 AM until 3 AM." />
     <meta property="og:site_name" content="40 Love Padel Club &amp; Cafe" />
     <meta property="og:title" content="40 Love Padel Club &amp; Cafe" />
     <meta property="og:description" content="Book padel at 40 Love Padel Club &amp; Cafe in Amman, Jordan. Three courts, open daily from 7 AM until 3 AM." />
@@ -14,19 +14,21 @@
     <meta property="og:url" content="https://40love.club" />
     <link rel="icon" type="image/png" href="/40love-logo-dark.png">
     <title>40 Love Padel Club &amp; Cafe</title>
-    <!--
-      Inline theme initialiser: runs synchronously before React mounts so
-      the page is never briefly rendered in the wrong colour scheme.
-      Reads 'serva-theme-v2' from localStorage (same key the app uses).
-    -->
+    <style>
+      html:has(#root:empty), html:has(#root:empty) body { background-color: var(--initial-canvas); }
+    </style>
+    <!-- Match the first paint to the saved preferences while the app loads. -->
     <script>
       (function () {
         try {
-          var t = localStorage.getItem('serva-theme-v2') || 'light';
-          document.documentElement.dataset.theme = t;
-          // Adjust theme-color meta for browser chrome
-          var mc = document.querySelector('meta[name="theme-color"]');
-          if (mc) mc.content = t === 'dark' ? '#075E6B' : '#F5F8F2';
+          var root = document.documentElement;
+          var dark = localStorage.getItem('serva-theme-v2') === 'dark';
+          var canvas = dark ? '#142522' : '#f6f4ea';
+          root.lang = localStorage.getItem('serva-locale') === 'ar' ? 'ar' : 'en';
+          root.dir = root.lang === 'ar' ? 'rtl' : 'ltr';
+          root.dataset.theme = dark ? 'dark' : 'light';
+          root.style.setProperty('--initial-canvas', canvas);
+          document.querySelector('meta[name="theme-color"]').content = canvas;
         } catch (e) {}
       })();
     </script>

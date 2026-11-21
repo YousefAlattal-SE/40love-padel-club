@@ -1,3 +1,5 @@
+import { clubCourtName } from '../format'
+import { MemberLoading } from './MemberStates'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useUser } from '@clerk/react'
@@ -121,11 +123,11 @@ function Icon({ name }) {
   return <svg className="profile-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>
 }
 
-function SectionHeading({ id, kicker, title, hint, action }) {
+function SectionHeading({ id, title, hint, action }) {
   return (
     <div className="mb-section-heading">
       <div>
-        <span className="mb-section-kicker">{kicker}</span>
+
         <h2 id={id}>{title}</h2>
         {hint && <p>{hint}</p>}
       </div>
@@ -149,7 +151,7 @@ function statusText(item, type, locale, copy) {
 function ActivityItem({ item, type, locale, copy }) {
   const status = String(item.status || '').toLowerCase().replace(/[ -]/g, '_')
   const statusClass = status === 'confirmed' ? 'confirmed' : status === 'no_show' ? 'no-show' : 'cancelled'
-  const name = type === 'booking' ? (item.courtName || copy.court) : (item.courtName || copy.match)
+  const name = clubCourtName(item.courtName, locale) || (type === 'booking' ? copy.court : copy.match)
   return (
     <article className="profile-activity-row">
       <div className="profile-activity-mark"><Icon name={type === 'booking' ? 'bookings' : 'matches'} /></div>
@@ -308,7 +310,7 @@ export default function Profile() {
       setIsEditing(false)
       setNotice(copy.saved)
     } catch (error) {
-      setNotice(error?.response?.data?.message || copy.saveFailed)
+      setNotice((!isArabic && error?.response?.data?.message) || copy.saveFailed)
     } finally {
       setSaving(false)
     }
@@ -326,14 +328,14 @@ export default function Profile() {
       setPasswordMessage(copy.passwordSuccess)
       setPasswordOpen(false)
     } catch (error) {
-      setPasswordMessage(error?.errors?.[0]?.longMessage || copy.passwordFailed)
+      setPasswordMessage((!isArabic && error?.errors?.[0]?.longMessage) || copy.passwordFailed)
     } finally {
       setPasswordBusy(false)
     }
   }
 
-  if (loading) return <section className="my-bookings-page member-profile-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}><div className="mb-loading"><span className="mb-spinner" /><span>{copy.loading}</span></div></section>
-  if (!profile) return <section className="my-bookings-page member-profile-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}><div className="mb-error-state" role="alert"><strong>{profileError || copy.loadFailed}</strong><button type="button" onClick={load}>{copy.tryAgain}</button></div></section>
+  if (loading) return <section className="my-bookings-page member-profile-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}><MemberLoading label={copy.loading} /></section>
+  if (!profile) return <section className="my-bookings-page member-profile-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}><div className="mb-error-state" role="alert"><strong>{(!isArabic && profileError) || copy.loadFailed}</strong><button type="button" onClick={load}>{copy.tryAgain}</button></div></section>
 
   const verified = clerkLoaded ? clerkUser?.primaryEmailAddress?.verification?.status === 'verified' : null
   const googleConnected = clerkLoaded ? Boolean(clerkUser?.externalAccounts?.some((account) => /google/i.test(String(account.provider || '')))) : null
@@ -344,8 +346,8 @@ export default function Profile() {
     <section className="my-bookings-page member-profile-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
       <header className="mb-page-hero">
         <div className="mb-hero-copy">
-          <span className="mb-page-tag"><span className="mb-page-tag-dot" />{copy.tag}</span>
-          <h1>{copy.title}<br /><span>{copy.titleAccent}</span></h1>
+
+          <h1>{isArabic ? 'ملفي الشخصي.' : 'Member profile.'}</h1>
           <p>{copy.intro}</p>
         </div>
         <aside className="mb-hero-summary profile-member-since">
@@ -374,7 +376,7 @@ export default function Profile() {
       </section>
 
       <section className="mb-bookings-section" aria-labelledby="profile-stats-title">
-        <SectionHeading id="profile-stats-title" kicker="01 / ACTIVITY" title={copy.stats} hint={copy.statsHint} />
+        <SectionHeading id="profile-stats-title" title={copy.stats} hint={copy.statsHint} />
         <div className="profile-stats-grid">
           {stats.map((stat) => (
             <article className="mb-booking-card profile-stat-card" key={stat.key}>
@@ -388,7 +390,7 @@ export default function Profile() {
       </section>
 
       <section className="mb-bookings-section" aria-labelledby="profile-personal-title">
-        <SectionHeading id="profile-personal-title" kicker="02 / MEMBER DETAILS" title={copy.personal} hint={copy.personalHint} />
+        <SectionHeading id="profile-personal-title" title={copy.personal} hint={copy.personalHint} />
         <form className="mb-booking-card profile-panel" onSubmit={saveProfile}>
           <div className="profile-form-grid">
             <label className="profile-field"><span>{copy.fullName} <b>*</b></span><input className="profile-input" value={form.fullName} onChange={(event) => updateForm('fullName', event.target.value)} readOnly={!isEditing} maxLength={255} autoComplete="name" required /></label>
@@ -403,7 +405,7 @@ export default function Profile() {
       </section>
 
       <section className="mb-bookings-section" aria-labelledby="profile-activity-title">
-        <SectionHeading id="profile-activity-title" kicker="03 / CLUB ACTIVITY" title={copy.activity} hint={copy.activityHint} />
+        <SectionHeading id="profile-activity-title" title={copy.activity} hint={copy.activityHint} />
         <div className="profile-activity-grid">
           <ActivitySection title={copy.upcomingBookings} hint={copy.nextSessions} items={bookingsError ? null : upcomingBookings} itemType="booking" empty={copy.noUpcomingBookings} failed={bookingsError} copy={copy} locale={locale} viewTo="/bookings" viewLabel={copy.viewBookings} />
           <ActivitySection title={copy.bookingHistory} hint={copy.previousSessions} items={bookingsError ? null : bookingHistory} itemType="booking" empty={copy.noBookingHistory} failed={bookingsError} copy={copy} locale={locale} viewTo="/bookings" viewLabel={copy.viewBookings} />
@@ -414,7 +416,7 @@ export default function Profile() {
 
       <div className="profile-settings-grid mb-bookings-section">
         <section aria-labelledby="profile-preferences-title">
-          <SectionHeading id="profile-preferences-title" kicker="04 / PREFERENCES" title={copy.preferences} hint={copy.preferencesHint} />
+          <SectionHeading id="profile-preferences-title" title={copy.preferences} hint={copy.preferencesHint} />
           <div className="mb-booking-card profile-panel profile-settings-card">
             <label className="profile-setting-row"><span><strong>{copy.language}</strong><small>{isArabic ? 'لغة عرض التطبيق' : 'Application display language'}</small></span><select className="profile-input profile-setting-select" value={locale} onChange={(event) => selectLocale(event.target.value)}><option value="en">{copy.english}</option><option value="ar">{copy.arabic}</option></select></label>
             <label className="profile-setting-row"><span><strong>{copy.theme}</strong><small>{isArabic ? 'المظهر الحالي للتطبيق' : 'Current application appearance'}</small></span><select className="profile-input profile-setting-select" value={theme} onChange={(event) => selectTheme(event.target.value)}><option value="light">{copy.light}</option><option value="dark">{copy.dark}</option></select></label>
@@ -422,7 +424,7 @@ export default function Profile() {
         </section>
 
         <section aria-labelledby="profile-security-title">
-          <SectionHeading id="profile-security-title" kicker="05 / SECURITY" title={copy.security} hint={copy.securityHint} />
+          <SectionHeading id="profile-security-title" title={copy.security} hint={copy.securityHint} />
           <div className="mb-booking-card profile-panel profile-settings-card">
             <div className="profile-security-row"><span><strong>{copy.verification}</strong><small>{profile.email}</small></span><span className={`mb-status ${verified ? 'mb-status-confirmed' : ''}`}>{verified === null ? copy.notAvailable : verified ? copy.verified : copy.unverified}</span></div>
             <div className="profile-security-row"><span><strong>{copy.connectedGoogle}</strong><small>{isArabic ? 'حساب تسجيل الدخول الخارجي' : 'External sign-in account'}</small></span><span className={`mb-status ${googleConnected ? 'mb-status-confirmed' : ''}`}>{googleConnected === null ? copy.notAvailable : googleConnected ? copy.connected : copy.notConnected}</span></div>

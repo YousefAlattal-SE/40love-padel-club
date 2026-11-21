@@ -1,0 +1,143 @@
+/* Interior pages use the same canvas, measure and type as the club's front page. */
+#member-main.member-pages {
+  width: min(1240px, calc(100% - 2 * var(--club-gutter)));
+  margin-inline: auto;
+  padding-block: clamp(32px, 4vw, 72px) var(--club-section);
+  color: var(--club-ink);
+  font: 400 1rem/1.6 var(--club-sans);
+  color-scheme: var(--club-scheme);
+
+  & :is(h1, h2, h3) { color: var(--club-ink); font-family: var(--club-sans); text-wrap: pretty; }
+  & h1 { margin: 0; font-size: clamp(3rem, 6vw, 6.6rem); line-height: 1.07; font-weight: 550; letter-spacing: -.055em; }
+  & h2 { font-size: clamp(1.5rem, 2.9vw, 2.8rem); line-height: 1.18; letter-spacing: -.035em; font-weight: 550; }
+  & :is(.member-title,.mb-page-hero,.mm-hero) { padding: 0 0 clamp(24px,3vw,46px); margin: 0 0 clamp(24px,3vw,46px); border: 0; border-bottom: 1px solid var(--club-control); min-height: 0; border-radius: 0; background: transparent; box-shadow: none; }
+  & .member-title p { margin-top: 12px; color: var(--club-muted); }
+  & a { color: var(--club-accent); text-underline-offset: .24em; }
+  & :is(a,button,input,textarea,select):focus-visible { outline: 3px solid var(--club-focus); outline-offset: 3px; }
+  & :is(.member-primary,.member-contact .club-button) { display: inline-flex; align-items: center; min-height: 46px; border: 0; border-radius: var(--club-radius); padding: 10px 20px; font: 650 .98rem/1.45 var(--club-sans); background: var(--club-accent); color: var(--club-on-accent); text-decoration: none; }
+  & .member-primary:hover { text-decoration: underline; }
+  & .venue-spread { display: grid; grid-template-columns: minmax(0,1.12fr) minmax(0,1fr); gap: clamp(28px,5vw,88px); align-items: start; }
+  & .venue-print { width: 100%; height: clamp(270px,33vw,460px); object-fit: cover; object-position: center 49%; }
+  & .venue-spread section > p { max-width: 54ch; margin: 12px 0; color: var(--club-muted); }
+  & .court-directory { padding: 0; list-style: none; margin-block: 24px; border-block-start: 1px solid var(--club-line); }
+  & .court-directory li { padding-block: 11px; border-block-end: 1px solid var(--club-line); display: flex; gap: 12px; justify-content: space-between; align-items: baseline; }
+  & .court-directory li span { color: var(--club-muted); font-size: .89rem; }
+  & .venue-rates { display: grid; grid-template-columns: .8fr 1.2fr; gap: 28px; margin-top: var(--club-section); }
+  & .price-spread { grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr); }
+  & .price-spread .member-primary { margin-top: 14px; }
+  & .venue-gallery .club-photo-open { flex: none; height: clamp(280px,45vw,620px); }
+  & .club-photo-index { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; padding-block: 24px; background: var(--club-bg); }
+  & .club-photo-index button { background: none; color: var(--club-ink); text-align: start; font: inherit; }
+  & .club-photo-index img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; margin-bottom: 8px; }
+  & .club-photo-index button[aria-pressed=true] span { text-decoration: underline; text-underline-offset: 4px; }
+  & .visit-spread .venue-print { height: clamp(200px,21vw,300px); margin-bottom: 20px; object-position: center 25%; }
+  & .visit-spread address { font-style: normal; color: var(--club-muted); margin-top: 12px; }
+  & .visit-contacts { display: flex; flex-wrap: wrap; gap: 2px 20px; }
+  & .visit-contacts a { min-height: 44px; display: inline-flex; align-items: center; text-decoration: underline; }
+  & .club-contact-form-home { display: grid; gap: 15px; margin-top: 20px; }
+  & .club-contact-form-home label { display: grid; gap: 5px; font-weight: 550; }
+  & .club-contact-form-home :is(input,textarea) { width: 100%; color: var(--club-ink); border: 1px solid var(--club-control); background: var(--club-input); border-radius: 3px; font: inherit; padding: 10px 12px; }
+  & .club-contact-form-home ::placeholder { color: var(--club-muted); opacity: 1; }
+  & .contact-feedback { background: transparent; border: 0; color: var(--club-success); }
+  & .contact-feedback.error { color: var(--club-error); }
+  & .member-loading { padding: 18px 0; color: var(--club-muted); }
+  & .member-loading i { display: block; margin-top: 12px; width: min(100%,36rem); height: 16px; background: var(--club-soft); }
+  & .member-loading i:nth-child(2) { width: min(82%,28rem); }
+  & .member-loading i:last-child { width: min(64%,23rem); }
+
+  /* The reservation, match and account components keep their interaction markup. */
+  & :is(.booking-page,.my-bookings-page,.mm-page) {
+    width: 100%; max-width: none; margin: 0; padding: 0; min-height: 0; font-family: var(--club-sans); background: transparent; color: var(--club-ink);
+    --display: var(--club-sans); --body: var(--club-sans); --member-display: var(--club-sans);
+    --mb-panel: var(--club-bg); --mb-surface: var(--club-surface); --mb-ink: var(--club-ink); --mb-muted: var(--club-muted);
+    --mb-brand: var(--club-accent); --mb-blue: var(--club-accent); --mb-line: var(--club-line); --mb-line-strong: var(--club-control);
+    --member-ink: var(--club-ink); --member-muted: var(--club-muted); --member-surface: var(--club-surface); --member-line: var(--club-line);
+    --member-lime: var(--club-felt); --member-teal: var(--club-accent); --member-shadow: none;
+  }
+  & :is(.booking-page,.my-bookings-page,.mm-page) :where(*) {
+    font-family: var(--club-sans); color: inherit; box-shadow: none; text-shadow: none; backdrop-filter: none;
+    background-image: none; border-radius: var(--club-radius); transition: none;
+  }
+  & :is(.booking-page,.my-bookings-page,.mm-page) :where(button,a,article):hover { transform: none; box-shadow: none; }
+  & :is(.mb-page-hero,.mm-hero,.mb-booking-card,.mm-card,.booking-panel,.booking-confirm-panel)::before,
+  & :is(.mb-page-hero,.mm-hero,.mb-booking-card,.mm-card,.booking-panel,.booking-confirm-panel)::after { content: none; }
+  & :is(.mm-hero,.mb-hero-copy) h1 { font: 550 clamp(3rem,6vw,6.6rem)/1.07 var(--club-sans); letter-spacing: -.055em; max-width: none; color: var(--club-ink); }
+  & :is(.mm-hero,.mb-hero-copy) p { margin-top: 14px; max-width: 56ch; font-size: 1.02rem; color: var(--club-muted); }
+  & .mb-page-hero { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
+  & .mb-hero-summary { width: auto; padding: 0; border: 0; background: none; color: var(--club-ink); min-height: auto; }
+  & .mb-hero-summary strong { font-size: 1.65rem; letter-spacing: -.02em; }
+  & .mb-summary-foot { display: none; }
+  & .mb-summary-label { color: var(--club-muted); }
+  & :is(.booking-panel,.booking-confirm-panel,.mb-booking-card,.mm-card,.mb-empty-state,.mm-state,.mm-filters,.mb-error-state) {
+    background: var(--club-surface); color: var(--club-ink); border: 1px solid var(--club-line); box-shadow: none;
+  }
+  & :is(.booking-panel,.booking-confirm-panel,.mb-booking-card,.mm-state,.mb-empty-state) { padding: clamp(16px,2.5vw,34px); }
+  & .mb-booking-list { display: grid; gap: 0; border-top: 1px solid var(--club-control); }
+  & .mb-booking-list .mb-booking-card { padding-inline: 0; background: transparent; border: 0; border-bottom: 1px solid var(--club-line); }
+  & :is(.mb-status,.mb-count-pill,.mm-sport-badge,.mm-status-badge,.mm-skill-tag,.booking-window-pill,.booking-availability-meta,.mym-countdown) {
+    background: var(--club-soft); color: var(--club-ink); border: 0; font-size: .84rem; letter-spacing: 0;
+  }
+  & :is(.mb-section-heading,.booking-panel-heading,.profile-activity-card-heading) h2 { color: var(--club-ink); font-weight: 550; line-height: 1.2; }
+  & :is(.booking-control-number,.mb-empty-icon,.booking-empty-mark,.mb-court-icon,.profile-stat-icon,.mm-state-icon,.booking-bottom-shield,.booking-step-label:empty) { display: none; }
+  & :is(.mb-section-heading p,.booking-panel-heading p,.booking-legend,.mb-booking-time,.mb-booking-payment,.mm-meta-label,.mm-price-label,.profile-field small,.mb-cancel-note) { color: var(--club-muted); font-size: .92rem; }
+  & :is(.booking-page,.my-bookings-page,.mm-page) :is(button,select,input) {
+    background: var(--club-surface); border: 1px solid var(--club-control); color: var(--club-ink); font-size: .96rem; min-height: 44px;
+  }
+  & :is(.booking-page,.my-bookings-page,.mm-page) :is(input,textarea)::placeholder { color: var(--club-muted); opacity: 1; }
+  & :is(.booking-confirm-button,.booking-phone-submit,.mm-join-btn,.mm-modal-actions .primary,.profile-primary-button,.mym-primary-button,.booking-day.is-active,.booking-slot.is-chosen,.mb-empty-state a) {
+    background: var(--club-accent); color: var(--club-on-accent); border: 1px solid var(--club-accent);
+  }
+  & :is(.booking-confirm-button,.booking-phone-submit,.profile-primary-button,.mm-join-btn,.profile-secondary-button,.mb-empty-state a,.mym-primary-button) { padding: 10px 16px; }
+  & :is(.booking-day.is-active,.booking-slot.is-chosen,.booking-confirm-button,.mm-join-btn) * { color: inherit; }
+  & :is(.booking-page,.my-bookings-page,.mm-page) button:disabled { cursor: default; }
+  & :is(.booking-days,.booking-table-wrap) { max-width: 100%; overflow-x: auto; }
+  & .booking-table-wrap { border: 1px solid var(--club-line); }
+  & .booking-table :is(th,td) { background: var(--club-surface); color: var(--club-ink); border-color: var(--club-line); }
+  & .booking-day { padding: 8px 13px; }
+  & .booking-slot.booked, & .booking-slot.past { background: var(--club-soft); color: var(--club-muted); opacity: 1; }
+  & .booking-slot.free.is-peak:not(.is-chosen) { border-color: var(--club-accent); border-style: dashed; }
+  & .booking-confirm-panel { color: var(--club-ink); border-block-start: 2px solid var(--club-accent); }
+  & :is(.booking-confirm-main,.booking-confirm-summary,.booking-duration-label,.booking-pricing-note,.booking-confirm-time,.booking-confirm-court,.booking-total-row,.booking-payment-note) { background: transparent; color: var(--club-ink); }
+  & .mm-hero { display: block; }
+  & :is(.mm-hero-inner,.mm-content) { max-width: none; margin: 0; padding: 0; }
+  & .mm-filters { align-items: end; padding: 14px 0; border: 0; border-block-end: 1px solid var(--club-line); background: transparent; }
+  & .mm-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; }
+  & :is(.mm-state,.mm-grid > .member-loading) { grid-column: 1/-1; }
+  & :is(.mm-card-header,.mm-card-footer,.mm-card-body,.mm-capacity,.mm-modal-header,.mm-modal-body,.mm-payment-notice) { background: transparent; color: var(--club-ink); border-color: var(--club-line); }
+  & .mm-capacity-bar { background: var(--club-soft); }
+  & .mm-capacity-fill { background: var(--club-accent); }
+  & :is(.booking-alert-error,.mb-inline-error,.mb-error-state,.mm-modal-error,.booking-phone-error) { background: var(--club-surface); color: var(--club-error); border-color: var(--club-control); }
+  & :is(.booking-alert-success,.mb-inline-success,.mym-notice-success) { background: var(--club-surface); color: var(--club-success); }
+  & .member-dialog { position: fixed; inset: 0; margin: auto; width: min(32rem,calc(100% - 28px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 0; background: var(--club-bg); border: 1px solid var(--club-control); color: var(--club-ink); }
+  & .member-dialog::backdrop { background: rgb(8 22 19 / 75%); }
+  & :is(.mm-modal,.booking-phone-modal) { margin: 0; padding: 24px; width: 100%; max-width: none; max-height: none; color: var(--club-ink); background: var(--club-bg); border: 0; animation: none; }
+  & .mm-modal-header { padding: 0 0 18px; }
+  & .mm-modal-body { padding: 16px 0 0; }
+  & :is(.mm-modal-close,.booking-phone-cancel) { color: var(--club-ink); background: var(--club-surface); }
+  & .profile-stats-grid { display: flex; flex-wrap: wrap; gap: 0 24px; border-block: 1px solid var(--club-line); }
+  & .profile-stat-card { flex: 1 1 130px; min-height: auto; padding: 18px 0; border: 0; background: transparent; }
+  & .profile-stat-card strong { color: var(--club-ink); }
+  & :is(.profile-setting-row,.profile-security-row,.profile-activity-row,.profile-activity-mark,.profile-avatar,.booking-court-badge) { background: transparent; border-color: var(--club-line); }
+  & .access-form .cl-footerItem p { color: var(--club-muted); }
+  & .member-auth-notice button { margin-block-start: 16px; margin-inline-end: 12px; padding: 8px 16px; min-height: 44px; background: var(--club-surface); border: 1px solid var(--club-control); color: var(--club-ink); }
+  & .access-spread { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items: start; gap: var(--club-gutter); }
+  & .access-form { width: min(100%,440px); margin: auto; }
+  & .access-form h1 { font-size: clamp(2.65rem,5.3vw,5.2rem); }
+  & .access-form > p { color: var(--club-muted); margin: 14px 0 26px; }
+  & .access-spread figure img { width: 100%; height: clamp(480px,65vh,720px); object-fit: cover; }
+}
+html:has(.member-dialog[open]) { overflow: hidden; }
+:root[lang='ar'] #member-main.member-pages :is(h1,h2,h3) { line-height: 1.45; letter-spacing: normal; }
+@media (max-width: 760px) {
+  #member-main.member-pages {
+    & :is(.venue-spread,.venue-rates,.access-spread,.mm-grid) { grid-template-columns: minmax(0,1fr); }
+    & .access-spread figure img { height: 220px; }
+    & .club-photo-index { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    & .mb-page-hero { align-items: start; flex-direction: column; }
+    & .mm-card { padding: 16px; }
+    & .mm-card-footer { flex-wrap: wrap; gap: 14px; }
+    & .booking-panel { padding-inline: 12px; min-width: 0; }
+    & .booking-confirm-panel { grid-template-columns: minmax(0,1fr); }
+    & .booking-phone-actions { flex-wrap: wrap; }
+  }
+}

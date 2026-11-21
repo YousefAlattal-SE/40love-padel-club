@@ -27,9 +27,7 @@
 .fortylove-site,
 .club-page,
 .auth-bg-page,
-.mm-page,
-.admin-root,
-.admin-login-page {
+.mm-page {
   background: transparent;
 }
 
@@ -45,9 +43,6 @@
   background: transparent !important;
 }
 
-:root[data-theme='dark'] .admin-root {
-  background: transparent;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .tennis-ball-bg {

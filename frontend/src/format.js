@@ -8,6 +8,12 @@ export function formatDateTime(iso) {
   })
 }
 
+export function clubCourtName(name, locale) {
+  if (locale !== 'ar' || !name) return name
+  return name.replace(/^(?:Padel )?Court\s*(\d+)$/i, (_, number) =>
+    'ملعب ' + Number(number).toLocaleString('ar-JO-u-nu-arab'))
+}
+
 export function formatTime(iso) {
   return new Date(iso).toLocaleTimeString('en-GB', {
     timeZone: ZONE, hour: '2-digit', minute: '2-digit',

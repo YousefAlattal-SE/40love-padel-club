@@ -1,14 +1,17 @@
+import Icon from './AdminIcon'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api, { errorMessage } from '../api'
+import { Badge, Notice, PageHeading, StatePanel } from './AdminUI'
+import { clubCourtName } from '../format'
 import { useAdminLocale } from './AdminLocale'
 
 const TEXT = {
   en: {
-    overview: 'Overview', overviewSub: 'A live snapshot of your club operations.', refresh: 'Refresh data', todayBookings: "Today's bookings", upcoming: 'Upcoming sessions', customers: 'Total customers', availableCourts: 'Courts available', revenueToday: 'Revenue today', revenueMonth: 'Revenue this month', unpaid: 'Awaiting payment', fromBookings: 'Bookings this month', of: 'of', courts: 'courts', recent: 'Recent bookings', viewAll: 'View all', clubHealth: 'Club at a glance', courtsReady: 'Courts currently available', courtCoverage: 'Court availability', dataNote: 'Metrics update from your live booking database.', booking: 'Booking', member: 'Customer', court: 'Court', session: 'Session', amount: 'Amount', status: 'Status', payment: 'Payment', actions: 'Actions', searchBookings: 'Search customer, email, court…', allBookings: 'All bookings', confirmed: 'Confirmed', cancelled: 'Cancelled', noShow: 'No show', bookingStatusMix: 'Bookings by status', allPadelBookings: 'All padel bookings', totalBookings: 'Total bookings', unpaidFilter: 'Unpaid', paid: 'Paid', markPaid: 'Mark paid', undoPaid: 'Undo payment', cancel: 'Cancel', markNoShow: 'No show', cancelConfirm: 'Cancel this booking?', noShowConfirm: 'Mark this booking as no-show?', bookingUpdated: 'Booking updated.', paymentUpdated: 'Payment updated.', noBookings: 'No bookings match your filters.', loading: 'Loading data…', loadError: 'Unable to load this data.', retry: 'Try again', manageBookings: 'Manage bookings', manageCourts: 'Manage courts', managePricing: 'Manage pricing', manageCustomers: 'Browse customers', edit: 'Edit', enabled: 'Available', disabled: 'Unavailable', toggleUnavailable: 'Mark unavailable', toggleAvailable: 'Make available', courtStatusUpdated: 'Court availability updated.', noCourts: 'No courts found.', pricingTitle: 'Court pricing', pricingSub: 'Update daytime and evening rates, including two-hour bundles.', sport: 'Sport', daytime: 'Daytime · 7:00 AM–6:00 PM', evening: 'Evening · 6:00 PM–3:00 AM', oneHour: '1 hour', twoHours: '2 hours', save: 'Save prices', saving: 'Saving…', pricesSaved: 'Prices saved. New bookings will use these rates.', price: 'JOD', customersTitle: 'Customers', customersSub: 'Member accounts and booking activity.', searchCustomers: 'Search name, email, phone…', name: 'Name', contact: 'Contact', bookings: 'Bookings', bookingValue: 'Booking value', joined: 'Joined', account: 'Account', active: 'Active', inactive: 'Inactive', noCustomers: 'No customers found.', error: 'Something went wrong.', openAdmin: 'Open admin', quickLinks: 'Quick actions', seasonNote: 'Use these shortcuts to manage your day.', bookingOps: 'Reservations and payment status', courtOps: 'Court status and availability', pricingOps: 'Daytime and evening rates', memberOps: 'Customer list and booking history', hoursLabel: 'CLUB HOURS', hoursValue: 'Every day · 7:00 AM – 3:00 AM', nameShort: '40 Love Padel Club & Cafe operations', paidOnly: 'Paid', statusSaved: 'Status updated.', unauthorized: 'This account does not have administrator access.', adminLogin: 'Administrator sign in', email: 'Email address', password: 'Password', signIn: 'Sign in to admin', signingIn: 'Signing in…', signInHelp: 'Use an account that has been assigned the admin role.', goHome: 'Back to website', loginFailed: 'Could not sign in. Check your credentials and try again.', adminOnly: 'Administrator access required', loginTitle: 'Your club. Under control.', loginSubtitle: 'Sign in to manage bookings, courts, pricing and members.', emptyValue: '—', createdAt: 'Created', paidAtClub: 'Pay at club', query: 'Search', all: 'All', courtDetails: 'Court details', updateFailed: 'Update failed. Please try again.', sport_padel: 'Padel', archivedActivity: 'Archived', perHour: 'per hour', bookingsSubtitle: 'Review every reservation and record front-desk payments.', paidStatus: 'Payment recorded', unpaidStatus: 'Payment due', userUnavailable: 'Inactive account', countLabel: 'records', loadingOverview: 'Preparing your dashboard', noData: 'No data available yet.',
+    overview: 'Club overview', overviewSub: 'Bookings, court availability and revenue.', refresh: 'Refresh data', todayBookings: "Today's bookings", upcoming: 'Upcoming sessions', customers: 'Total customers', availableCourts: 'Courts available', revenueToday: 'Revenue today', revenueMonth: 'Revenue this month', unpaid: 'Awaiting payment', fromBookings: 'Bookings this month', of: 'of', courts: 'courts', recent: 'Recent bookings', viewAll: 'View all', clubHealth: 'Club at a glance', courtsReady: 'Courts currently available', courtCoverage: 'Court availability', dataNote: 'Metrics update from your live booking database.', booking: 'Booking', member: 'Customer', court: 'Court', session: 'Session', amount: 'Amount', status: 'Status', payment: 'Payment', actions: 'Actions', searchBookings: 'Search customer, email, court…', allBookings: 'All bookings', confirmed: 'Confirmed', cancelled: 'Cancelled', noShow: 'No show', bookingStatusMix: 'Bookings by status', allPadelBookings: 'All padel bookings', totalBookings: 'Total bookings', unpaidFilter: 'Unpaid', paid: 'Paid', markPaid: 'Mark paid', undoPaid: 'Undo payment', cancel: 'Cancel', markNoShow: 'No show', cancelConfirm: 'Cancel this booking?', noShowConfirm: 'Mark this booking as no-show?', bookingUpdated: 'Booking updated.', paymentUpdated: 'Payment updated.', noBookings: 'No bookings match your filters.', loading: 'Loading data…', loadError: 'Unable to load this data.', retry: 'Try again', manageBookings: 'Manage bookings', manageCourts: 'Manage courts', managePricing: 'Manage pricing', manageCustomers: 'Browse customers', edit: 'Edit', enabled: 'Available', disabled: 'Unavailable', toggleUnavailable: 'Mark unavailable', toggleAvailable: 'Make available', courtStatusUpdated: 'Court availability updated.', noCourts: 'No courts found.', pricingTitle: 'Court pricing', pricingSub: 'Update daytime and evening rates, including two-hour bundles.', sport: 'Sport', daytime: 'Daytime · 7:00 AM–6:00 PM', evening: 'Evening · 6:00 PM–3:00 AM', oneHour: '1 hour', twoHours: '2 hours', save: 'Save prices', saving: 'Saving…', pricesSaved: 'Prices saved. New bookings will use these rates.', price: 'JOD', customersTitle: 'Customers', customersSub: 'Member accounts and booking activity.', searchCustomers: 'Search name, email, phone…', name: 'Name', contact: 'Contact', bookings: 'Bookings', bookingValue: 'Booking value', joined: 'Joined', account: 'Account', active: 'Active', inactive: 'Inactive', noCustomers: 'No customers found.', error: 'Something went wrong.', openAdmin: 'Open admin', quickLinks: 'Quick actions', seasonNote: 'Use these shortcuts to manage your day.', bookingOps: 'Reservations and payment status', courtOps: 'Court status and availability', pricingOps: 'Daytime and evening rates', memberOps: 'Customer list and booking history', hoursLabel: 'CLUB HOURS', hoursValue: 'Every day · 7:00 AM – 3:00 AM', nameShort: '40 Love Padel Club & Cafe operations', paidOnly: 'Paid', statusSaved: 'Status updated.', unauthorized: 'This account does not have administrator access.', adminLogin: 'Administrator sign in', email: 'Email address', password: 'Password', signIn: 'Sign in to admin', signingIn: 'Signing in…', signInHelp: 'Use an account that has been assigned the admin role.', goHome: 'Back to website', loginFailed: 'Could not sign in. Check your credentials and try again.', adminOnly: 'Administrator access required', loginTitle: 'Your club. Under control.', loginSubtitle: 'Sign in to manage bookings, courts, pricing and members.', emptyValue: '—', createdAt: 'Created', paidAtClub: 'Pay at club', query: 'Search', all: 'All', courtDetails: 'Court details', updateFailed: 'Update failed. Please try again.', sport_padel: 'Padel', archivedActivity: 'Archived', perHour: 'per hour', bookingsSubtitle: 'Review every reservation and record front-desk payments.', paidStatus: 'Payment recorded', unpaidStatus: 'Payment due', userUnavailable: 'Inactive account', countLabel: 'records', loadingOverview: 'Preparing your dashboard', noData: 'No data available yet.',
   },
   ar: {
-    overview: 'نظرة عامة', overviewSub: 'ملخص مباشر لعمليات النادي.', refresh: 'تحديث البيانات', todayBookings: 'حجوزات اليوم', upcoming: 'الجلسات القادمة', customers: 'إجمالي العملاء', availableCourts: 'الملاعب المتاحة', revenueToday: 'إيرادات اليوم', revenueMonth: 'إيرادات هذا الشهر', unpaid: 'بانتظار الدفع', fromBookings: 'حجوزات هذا الشهر', of: 'من', courts: 'ملاعب', recent: 'أحدث الحجوزات', viewAll: 'عرض الكل', clubHealth: 'ملخص النادي', courtsReady: 'الملاعب المتاحة حاليًا', courtCoverage: 'توفر الملاعب', dataNote: 'يتم تحديث المؤشرات من قاعدة بيانات الحجوزات.', booking: 'الحجز', member: 'العميل', court: 'الملعب', session: 'الجلسة', amount: 'المبلغ', status: 'الحالة', payment: 'الدفع', actions: 'الإجراءات', searchBookings: 'ابحث باسم العميل أو البريد أو الملعب…', allBookings: 'كل الحجوزات', confirmed: 'مؤكد', cancelled: 'ملغي', noShow: 'لم يحضر', bookingStatusMix: 'الحجوزات حسب الحالة', allPadelBookings: 'جميع حجوزات البادل', totalBookings: 'إجمالي الحجوزات', unpaidFilter: 'غير مدفوع', paid: 'مدفوع', markPaid: 'تسجيل الدفع', undoPaid: 'إلغاء تسجيل الدفع', cancel: 'إلغاء', markNoShow: 'لم يحضر', cancelConfirm: 'هل تريد إلغاء هذا الحجز؟', noShowConfirm: 'هل تريد تسجيل عدم حضور العميل؟', bookingUpdated: 'تم تحديث الحجز.', paymentUpdated: 'تم تحديث الدفع.', noBookings: 'لا توجد حجوزات تطابق البحث.', loading: 'جارٍ تحميل البيانات…', loadError: 'تعذر تحميل البيانات.', retry: 'إعادة المحاولة', manageBookings: 'إدارة الحجوزات', manageCourts: 'إدارة الملاعب', managePricing: 'إدارة الأسعار', manageCustomers: 'عرض العملاء', edit: 'تعديل', enabled: 'متاح', disabled: 'غير متاح', toggleUnavailable: 'تحديد كغير متاح', toggleAvailable: 'إتاحة الملعب', courtStatusUpdated: 'تم تحديث توفر الملعب.', noCourts: 'لا توجد ملاعب.', pricingTitle: 'أسعار الملاعب', pricingSub: 'عدّل أسعار الفترة النهارية والمسائية، بما فيها باقات الساعتين. تطبق الأسعار على الحجوزات الجديدة.', sport: 'الرياضة', daytime: 'نهاري · ٧ صباحًا–٦ مساءً', evening: 'مسائي · ٦ مساءً–٣ صباحًا', oneHour: 'ساعة واحدة', twoHours: 'ساعتان', save: 'حفظ الأسعار', saving: 'جارٍ الحفظ…', pricesSaved: 'تم حفظ الأسعار. ستستخدم الحجوزات الجديدة الأسعار المحدّثة.', price: 'دينار أردني', customersTitle: 'العملاء', customersSub: 'حسابات الأعضاء ونشاط الحجوزات.', searchCustomers: 'ابحث بالاسم أو البريد أو الهاتف…', name: 'الاسم', contact: 'بيانات التواصل', bookings: 'الحجوزات', bookingValue: 'قيمة الحجوزات', joined: 'تاريخ الانضمام', account: 'الحساب', active: 'نشط', inactive: 'غير نشط', noCustomers: 'لم يتم العثور على عملاء.', error: 'حدث خطأ.', openAdmin: 'فتح لوحة الإدارة', quickLinks: 'إجراءات سريعة', seasonNote: 'استخدم الاختصارات لإدارة يومك.', bookingOps: 'الحجوزات وحالة الدفع', courtOps: 'حالة الملاعب وتوفرها', pricingOps: 'الأسعار النهارية والمسائية', memberOps: 'قائمة العملاء وسجل الحجوزات', hoursLabel: 'ساعات النادي', hoursValue: 'يوميًا · ٧:٠٠ صباحًا – ٣:٠٠ صباحًا', nameShort: 'عمليات نادي 40 Love للبادل والمقهى', paidOnly: 'مدفوع', statusSaved: 'تم تحديث الحالة.', unauthorized: 'هذا الحساب لا يملك صلاحيات الإدارة.', adminLogin: 'دخول المسؤول', email: 'البريد الإلكتروني', password: 'كلمة المرور', signIn: 'الدخول إلى لوحة الإدارة', signingIn: 'جارٍ تسجيل الدخول…', signInHelp: 'استخدم حسابًا تم تعيين صلاحية المسؤول له.', goHome: 'العودة إلى الموقع', loginFailed: 'تعذر تسجيل الدخول. تحقق من بياناتك وحاول مجددًا.', adminOnly: 'يتطلب صلاحية مسؤول', loginTitle: 'ناديك. تحت سيطرتك.', loginSubtitle: 'سجّل الدخول لإدارة الحجوزات والملاعب والأسعار والأعضاء.', emptyValue: '—', createdAt: 'تاريخ الإنشاء', paidAtClub: 'الدفع في النادي', sport_padel: 'بادل', archivedActivity: 'مؤرشف', perHour: 'لكل ساعة', bookingsSubtitle: 'راجع الحجوزات وسجّل المدفوعات في مكتب الاستقبال.', paidStatus: 'تم تسجيل الدفع', unpaidStatus: 'الدفع مستحق', userUnavailable: 'حساب غير نشط', countLabel: 'سجلات', loadingOverview: 'جارٍ تجهيز لوحة الإدارة', noData: 'لا توجد بيانات بعد.',
+    all: 'الكل', updateFailed: 'تعذّر حفظ التغيير. حاول مجددًا.', overview: 'نظرة عامة', overviewSub: 'الحجوزات وتوافر الملاعب والإيرادات.', refresh: 'تحديث البيانات', todayBookings: 'حجوزات اليوم', upcoming: 'الجلسات القادمة', customers: 'إجمالي العملاء', availableCourts: 'الملاعب المتاحة', revenueToday: 'إيرادات اليوم', revenueMonth: 'إيرادات هذا الشهر', unpaid: 'بانتظار الدفع', fromBookings: 'حجوزات هذا الشهر', of: 'من', courts: 'ملاعب', recent: 'أحدث الحجوزات', viewAll: 'عرض الكل', clubHealth: 'ملخص النادي', courtsReady: 'الملاعب المتاحة حاليًا', courtCoverage: 'توفر الملاعب', dataNote: 'يتم تحديث المؤشرات من قاعدة بيانات الحجوزات.', booking: 'الحجز', member: 'العميل', court: 'الملعب', session: 'الجلسة', amount: 'المبلغ', status: 'الحالة', payment: 'الدفع', actions: 'الإجراءات', searchBookings: 'ابحث باسم العميل أو البريد أو الملعب…', allBookings: 'كل الحجوزات', confirmed: 'مؤكد', cancelled: 'ملغي', noShow: 'لم يحضر', bookingStatusMix: 'الحجوزات حسب الحالة', allPadelBookings: 'جميع حجوزات البادل', totalBookings: 'إجمالي الحجوزات', unpaidFilter: 'غير مدفوع', paid: 'مدفوع', markPaid: 'تسجيل الدفع', undoPaid: 'إلغاء تسجيل الدفع', cancel: 'إلغاء', markNoShow: 'لم يحضر', cancelConfirm: 'هل تريد إلغاء هذا الحجز؟', noShowConfirm: 'هل تريد تسجيل عدم حضور العميل؟', bookingUpdated: 'تم تحديث الحجز.', paymentUpdated: 'تم تحديث الدفع.', noBookings: 'لا توجد حجوزات تطابق البحث.', loading: 'جارٍ تحميل البيانات…', loadError: 'تعذر تحميل البيانات.', retry: 'إعادة المحاولة', manageBookings: 'إدارة الحجوزات', manageCourts: 'إدارة الملاعب', managePricing: 'إدارة الأسعار', manageCustomers: 'عرض العملاء', edit: 'تعديل', enabled: 'متاح', disabled: 'غير متاح', toggleUnavailable: 'تحديد كغير متاح', toggleAvailable: 'إتاحة الملعب', courtStatusUpdated: 'تم تحديث توفر الملعب.', noCourts: 'لا توجد ملاعب.', pricingTitle: 'أسعار الملاعب', pricingSub: 'عدّل أسعار الفترة النهارية والمسائية، بما فيها باقات الساعتين. تطبق الأسعار على الحجوزات الجديدة.', sport: 'الرياضة', daytime: 'نهاري · ٧ صباحًا–٦ مساءً', evening: 'مسائي · ٦ مساءً–٣ صباحًا', oneHour: 'ساعة واحدة', twoHours: 'ساعتان', save: 'حفظ الأسعار', saving: 'جارٍ الحفظ…', pricesSaved: 'تم حفظ الأسعار. ستستخدم الحجوزات الجديدة الأسعار المحدّثة.', price: 'دينار أردني', customersTitle: 'العملاء', customersSub: 'حسابات الأعضاء ونشاط الحجوزات.', searchCustomers: 'ابحث بالاسم أو البريد أو الهاتف…', name: 'الاسم', contact: 'بيانات التواصل', bookings: 'الحجوزات', bookingValue: 'قيمة الحجوزات', joined: 'تاريخ الانضمام', account: 'الحساب', active: 'نشط', inactive: 'غير نشط', noCustomers: 'لم يتم العثور على عملاء.', error: 'حدث خطأ.', openAdmin: 'فتح لوحة الإدارة', quickLinks: 'إجراءات سريعة', seasonNote: 'استخدم الاختصارات لإدارة يومك.', bookingOps: 'الحجوزات وحالة الدفع', courtOps: 'حالة الملاعب وتوفرها', pricingOps: 'الأسعار النهارية والمسائية', memberOps: 'قائمة العملاء وسجل الحجوزات', hoursLabel: 'ساعات النادي', hoursValue: 'يوميًا · ٧:٠٠ صباحًا – ٣:٠٠ صباحًا', nameShort: 'عمليات نادي 40 Love للبادل والمقهى', paidOnly: 'مدفوع', statusSaved: 'تم تحديث الحالة.', unauthorized: 'هذا الحساب لا يملك صلاحيات الإدارة.', adminLogin: 'دخول المسؤول', email: 'البريد الإلكتروني', password: 'كلمة المرور', signIn: 'الدخول إلى لوحة الإدارة', signingIn: 'جارٍ تسجيل الدخول…', signInHelp: 'استخدم حسابًا تم تعيين صلاحية المسؤول له.', goHome: 'العودة إلى الموقع', loginFailed: 'تعذر تسجيل الدخول. تحقق من بياناتك وحاول مجددًا.', adminOnly: 'يتطلب صلاحية مسؤول', loginTitle: 'ناديك. تحت سيطرتك.', loginSubtitle: 'سجّل الدخول لإدارة الحجوزات والملاعب والأسعار والأعضاء.', emptyValue: '—', createdAt: 'تاريخ الإنشاء', paidAtClub: 'الدفع في النادي', sport_padel: 'بادل', archivedActivity: 'مؤرشف', perHour: 'لكل ساعة', bookingsSubtitle: 'راجع الحجوزات وسجّل المدفوعات في مكتب الاستقبال.', paidStatus: 'تم تسجيل الدفع', unpaidStatus: 'الدفع مستحق', userUnavailable: 'حساب غير نشط', countLabel: 'سجلات', loadingOverview: 'جارٍ تجهيز لوحة الإدارة', noData: 'لا توجد بيانات بعد.',
   },
 }
 
@@ -30,46 +33,6 @@ function useCopy() {
   return { locale, t: TEXT[locale] || TEXT.en, ar: locale === 'ar' }
 }
 
-function Icon({ name, size = 18 }) {
-  const shapes = {
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></>,
-    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="10" cy="7" r="4" /><path d="M20 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8" /></>,
-    court: <><rect x="3" y="3" width="18" height="18" rx="1" /><path d="M12 3v18M3 12h18" /></>,
-    coin: <><circle cx="12" cy="12" r="9" /><path d="M16 8.5c-.7-.8-1.7-1.2-3-1.2-1.5 0-2.6.8-2.6 2s1.1 1.8 2.8 2.2c1.8.4 2.8 1 2.8 2.3s-1.3 2.3-3.1 2.3c-1.4 0-2.7-.5-3.5-1.5M12.9 5.5v13" /></>,
-    chart: <><path d="M3 3v18h18" /><path d="m7 14 4-4 3 3 6-7" /></>,
-    check: <path d="m5 12 4 4L19 6" />,
-    search: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></>,
-    refresh: <><path d="M20 11a8 8 0 0 0-14.8-3L3 11" /><path d="M3 5v6h6M4 13a8 8 0 0 0 14.8 3L21 13" /><path d="M21 19v-6h-6" /></>,
-    arrow: <><path d="M5 12h14M13 6l6 6-6 6" /></>,
-    close: <path d="m6 6 12 12M18 6 6 18" />,
-    clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
-    wallet: <><rect x="3" y="5" width="18" height="15" rx="2" /><path d="M3 9h18M16 15h2" /></>,
-    message: <><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5 9 9 0 0 1-4-.9L3 21l1.9-4.5A8.5 8.5 0 1 1 21 11.5Z" /><path d="M8 11h8M8 15h5" /></>,
-  }
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name] || shapes.chart}</svg>
-}
-
-function PageHeading({ eyebrow, title, description, action }) {
-  return <div className="admin-page-heading"><div><div className="admin-eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p>{description}</p>}</div>{action && <div className="admin-heading-action">{action}</div>}</div>
-}
-
-function Notice({ type = 'info', children, onClose }) {
-  if (!children) return null
-  return <div className={`admin-notice ${type}`} role="status"><span>{children}</span>{onClose && <button onClick={onClose} aria-label="Dismiss"><Icon name="close" size={15} /></button>}</div>
-}
-
-function StatePanel({ loading, error, retry, empty, children }) {
-  const { t } = useCopy()
-  if (loading) return <div className="admin-state-panel"><span className="admin-spinner" /><strong>{t.loading}</strong></div>
-  if (error) return <div className="admin-state-panel"><strong>{t.loadError}</strong><p>{error}</p><button className="admin-button secondary" onClick={retry}>{t.retry}</button></div>
-  if (empty) return <div className="admin-state-panel"><span className="admin-empty-icon"><Icon name="calendar" size={24} /></span><strong>{empty}</strong></div>
-  return children
-}
-
-function Badge({ children, tone = 'neutral' }) {
-  return <span className={`admin-badge ${tone}`}>{children}</span>
-}
-
 function statusTone(status) {
   return status === 'confirmed' ? 'success' : status === 'cancelled' ? 'danger' : status === 'no_show' ? 'warning' : 'neutral'
 }
@@ -79,7 +42,7 @@ function statusLabel(status, t) {
 function sportLabel(sport, t) { return t[`sport_${String(sport).toLowerCase()}`] || t.archivedActivity || t.court }
 function money(value, locale) {
   const formatted = new Intl.NumberFormat(locale === 'ar' ? 'ar-JO' : 'en-GB', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value || 0))
-  return `${formatted} JOD`
+  return `${formatted} ${locale === 'ar' ? 'د.أ.' : 'JOD'}`
 }
 function dateTime(value, locale) {
   if (!value) return '—'
@@ -122,12 +85,12 @@ export function AdminOverviewPage() {
   }, [reload])
 
   const stats = overview ? [
-    { key: 'todayBookings', value: overview.bookingsToday, icon: 'calendar', tone: 'blue', hint: `${overview.bookingsThisMonth} ${t.fromBookings.toLowerCase()}` },
-    { key: 'upcoming', value: overview.upcomingBookings, icon: 'clock', tone: 'violet', hint: OVERVIEW_HINTS[locale]?.upcoming },
-    { key: 'customers', value: overview.totalCustomers, icon: 'users', tone: 'cyan', hint: OVERVIEW_HINTS[locale]?.customers },
-    { key: 'availableCourts', value: `${overview.availableCourts}/${overview.totalCourts}`, icon: 'court', tone: 'green', hint: t.courtCoverage },
-    { key: 'revenueToday', value: money(overview.revenueToday, locale), icon: 'coin', tone: 'orange', hint: OVERVIEW_HINTS[locale]?.revenueToday },
-    { key: 'revenueMonth', value: money(overview.revenueThisMonth, locale), icon: 'chart', tone: 'blue', hint: '' },
+    { key: 'todayBookings', value: overview.bookingsToday, hint: `${overview.bookingsThisMonth} ${t.fromBookings.toLowerCase()}` },
+    { key: 'upcoming', value: overview.upcomingBookings, hint: OVERVIEW_HINTS[locale]?.upcoming },
+    { key: 'customers', value: overview.totalCustomers, hint: OVERVIEW_HINTS[locale]?.customers },
+    { key: 'availableCourts', value: `${overview.availableCourts}/${overview.totalCourts}`, hint: t.courtCoverage },
+    { key: 'revenueToday', value: money(overview.revenueToday, locale), hint: OVERVIEW_HINTS[locale]?.revenueToday },
+    { key: 'revenueMonth', value: money(overview.revenueThisMonth, locale), hint: '' },
   ] : []
 
   const statusCounts = useMemo(() => bookings.reduce((counts, booking) => {
@@ -141,18 +104,27 @@ export function AdminOverviewPage() {
   ]
 
   return <div className="admin-overview-page">
-    <PageHeading eyebrow={ar ? 'مساحة الإدارة / 01' : 'ADMIN WORKSPACE / 01'} title={t.overview} description={t.overviewSub} action={<button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button>} />
+    <PageHeading title={t.overview} description={t.overviewSub} action={<button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button>} />
     <StatePanel loading={loading} error={error} retry={refresh}>
       {overview && <>
-        <section className="admin-stats-grid">
-          {stats.map((stat) => <article className={`admin-stat-card tone-${stat.tone}`} key={stat.key}>
-            <div className="admin-stat-top"><span>{t[stat.key]}</span><i><Icon name={stat.icon} size={19} /></i></div>
-            <strong className="admin-stat-value">{stat.value}</strong>{stat.hint && <small>{stat.hint}</small>}
-          </article>)}
-        </section>
+        <div className="admin-summary">
+          {[stats.slice(4), stats.slice(0, 4)].map((group, index) =>
+            <dl className={index === 0 ? 'admin-revenue' : 'admin-activity'} key={group[0].key}>
+              {group.map(stat => <div key={stat.key}><dt>{t[stat.key]}</dt>
+                <dd className="admin-stat-value"><bdi>{stat.value}</bdi></dd>{stat.hint && <dd className="admin-stat-note">{stat.hint}</dd>}
+              </div>)}
+            </dl>)}
+        </div>
+          <section className="admin-panel admin-recent-panel">
+            <div className="admin-panel-heading"><div><h2>{t.recent}</h2></div><Link to="/admin/bookings" className="admin-inline-link">{t.viewAll}<Icon name="arrow" size={15} /></Link></div>
+            <div className="admin-table-scroll" role="region" aria-label={ar ? 'جدول السجلات' : 'Records table'} tabIndex={0} data-lenis-prevent><table className="admin-table"><thead><tr><th>{t.member}</th><th>{t.court}</th><th>{t.session}</th><th>{t.amount}</th><th>{t.status}</th></tr></thead><tbody>
+            {bookings.slice(0, 6).map((booking) => <tr key={booking.id}><td><strong>{booking.customerName}</strong><small>{booking.email}</small><PhoneContact phone={booking.phone} /></td><td><strong>{clubCourtName(booking.courtName, locale)}</strong><small>{sportLabel(booking.sport, t)}</small></td><td>{dateTime(booking.startsAt, locale)}</td><td className="admin-money-cell">{money(booking.totalPrice, locale)}<small>{booking.paid ? t.paidStatus : t.unpaidStatus}</small></td><td><Badge tone={statusTone(booking.status)}>{statusLabel(booking.status, t)}</Badge></td></tr>)}
+            {!bookings.length && <tr><td colSpan="5" className="admin-table-empty">{t.noData}</td></tr>}
+            </tbody></table></div>
+          </section>
         <div className="admin-overview-grid">
           <section className="admin-panel admin-status-panel" aria-labelledby="admin-booking-status-title">
-            <div className="admin-panel-heading"><div><span className="admin-panel-kicker">{ar ? 'الحجوزات' : 'BOOKINGS'}</span><h2 id="admin-booking-status-title">{t.bookingStatusMix}</h2></div><span className="admin-status-total"><strong>{bookings.length}</strong><small>{t.totalBookings}</small></span></div>
+            <div className="admin-panel-heading"><div><h2 id="admin-booking-status-title">{t.bookingStatusMix}</h2></div><span className="admin-status-total"><strong>{bookings.length}</strong><small>{t.totalBookings}</small></span></div>
             <p className="admin-status-caption">{t.allPadelBookings}</p>
             {bookings.length ? <>
               <div className="admin-status-bar" aria-hidden="true">
@@ -168,23 +140,17 @@ export function AdminOverviewPage() {
             </> : <p className="admin-status-empty">{t.noData}</p>}
           </section>
           <section className="admin-panel admin-quick-panel">
-            <div className="admin-panel-heading"><div><span className="admin-panel-kicker">{ar ? 'اختصارات' : 'SHORTCUTS'}</span><h2>{t.quickLinks}</h2></div></div>
+            <div className="admin-panel-heading"><div><h2>{t.quickLinks}</h2></div></div>
             <div className="admin-quick-list">
-              <Link to="/admin/bookings"><i className="tone-blue"><Icon name="calendar" /></i><span><strong>{t.manageBookings}</strong><small>{t.bookingOps}</small></span><Icon name="arrow" size={17} /></Link>
-              <Link to="/admin/courts"><i className="tone-cyan"><Icon name="court" /></i><span><strong>{t.manageCourts}</strong><small>{t.courtOps}</small></span><Icon name="arrow" size={17} /></Link>
-              <Link to="/admin/pricing"><i className="tone-violet"><Icon name="coin" /></i><span><strong>{t.managePricing}</strong><small>{t.pricingOps}</small></span><Icon name="arrow" size={17} /></Link>
-              <Link to="/admin/customers"><i className="tone-green"><Icon name="users" /></i><span><strong>{t.manageCustomers}</strong><small>{t.memberOps}</small></span><Icon name="arrow" size={17} /></Link>
-              <Link to="/admin/messages"><i className="tone-violet"><Icon name="message" /></i><span><strong>{ar ? 'رسائل التواصل' : 'Contact messages'}</strong><small>{ar ? 'ملاحظات ورسائل الأعضاء والزوار' : 'Notes sent through the contact form'}</small></span><Icon name="arrow" size={17} /></Link>
+              <Link to="/admin/bookings"><span><strong>{t.manageBookings}</strong><small>{t.bookingOps}</small></span><Icon name="arrow" size={17} /></Link>
+              <Link to="/admin/courts"><span><strong>{t.manageCourts}</strong><small>{t.courtOps}</small></span><Icon name="arrow" size={17} /></Link>
+              <Link to="/admin/pricing"><span><strong>{t.managePricing}</strong><small>{t.pricingOps}</small></span><Icon name="arrow" size={17} /></Link>
+              <Link to="/admin/customers"><span><strong>{t.manageCustomers}</strong><small>{t.memberOps}</small></span><Icon name="arrow" size={17} /></Link>
+              <Link to="/admin/messages"><span><strong>{ar ? 'رسائل التواصل' : 'Contact messages'}</strong><small>{ar ? 'ملاحظات ورسائل الأعضاء والزوار' : 'Notes sent through the contact form'}</small></span><Icon name="arrow" size={17} /></Link>
             </div>
-            <div className="admin-hours-callout"><span>{t.hoursLabel}</span><strong>{t.hoursValue}</strong><small><i />{t.dataNote}</small></div>
+            <p className="admin-hours-callout">{t.hoursLabel} · {t.hoursValue}</p>
           </section>
-          <section className="admin-panel admin-recent-panel">
-            <div className="admin-panel-heading"><div><span className="admin-panel-kicker">{ar ? 'النشاط' : 'ACTIVITY'}</span><h2>{t.recent}</h2></div><Link to="/admin/bookings" className="admin-inline-link">{t.viewAll}<Icon name="arrow" size={15} /></Link></div>
-            <div className="admin-table-scroll" data-lenis-prevent><table className="admin-table"><thead><tr><th>{t.member}</th><th>{t.court}</th><th>{t.session}</th><th>{t.amount}</th><th>{t.status}</th></tr></thead><tbody>
-            {bookings.slice(0, 6).map((booking) => <tr key={booking.id}><td><strong>{booking.customerName}</strong><small>{booking.email}</small><PhoneContact phone={booking.phone} /></td><td><strong>{booking.courtName}</strong><small>{sportLabel(booking.sport, t)}</small></td><td>{dateTime(booking.startsAt, locale)}</td><td className="admin-money-cell">{money(booking.totalPrice, locale)}<small>{booking.paid ? t.paidStatus : t.unpaidStatus}</small></td><td><Badge tone={statusTone(booking.status)}>{statusLabel(booking.status, t)}</Badge></td></tr>)}
-            {!bookings.length && <tr><td colSpan="5" className="admin-table-empty">{t.noData}</td></tr>}
-            </tbody></table></div>
-          </section>
+
         </div>
       </>}
     </StatePanel>
@@ -239,17 +205,17 @@ export function AdminBookingsPage() {
   const filters = [{ key: 'all', label: t.allBookings }, { key: 'confirmed', label: t.confirmed }, { key: 'unpaid', label: t.unpaidFilter }, { key: 'cancelled', label: t.cancelled }, { key: 'no_show', label: t.noShow }]
 
   return <>
-    <PageHeading eyebrow={ar ? 'مساحة الإدارة / 02' : 'ADMIN WORKSPACE / 02'} title={t.manageBookings} description={t.bookingsSubtitle} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
+    <PageHeading title={t.manageBookings} description={t.bookingsSubtitle} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <section className="admin-panel admin-list-panel">
       <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchBookings} aria-label={t.searchBookings} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
-      <div className="admin-filter-row" data-lenis-prevent>{filters.map((item) => <button key={item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
+      <div className="admin-filter-row" data-lenis-prevent>{filters.map((item) => <button key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? t.noBookings : null}>
-        <div className="admin-table-scroll" data-lenis-prevent><table className="admin-table admin-bookings-table"><thead><tr><th>{t.booking}</th><th>{t.member}</th><th>{t.court}</th><th>{t.session}</th><th>{t.amount}</th><th>{t.status}</th><th>{t.payment}</th><th>{t.actions}</th></tr></thead><tbody>
+        <div className="admin-table-scroll" role="region" aria-label={ar ? 'جدول السجلات' : 'Records table'} tabIndex={0} data-lenis-prevent><table className="admin-table admin-bookings-table"><thead><tr><th>{t.booking}</th><th>{t.member}</th><th>{t.court}</th><th>{t.session}</th><th>{t.amount}</th><th>{t.status}</th><th>{t.payment}</th><th>{t.actions}</th></tr></thead><tbody>
         {filtered.map((booking) => <tr key={booking.id}>
           <td><span className="admin-id">#{booking.id}</span><small>{dateOnly(booking.createdAt, locale)}</small></td>
           <td><strong>{booking.customerName}</strong><small>{booking.email}</small><PhoneContact phone={booking.phone} /></td>
-          <td><strong>{booking.courtName}</strong><small>{sportLabel(booking.sport, t)}</small></td>
+          <td><strong>{clubCourtName(booking.courtName, locale)}</strong><small>{sportLabel(booking.sport, t)}</small></td>
           <td><strong>{dateTime(booking.startsAt, locale)}</strong><small>{booking.hours} {ar ? 'ساعة' : booking.hours === 1 ? 'hour' : 'hours'}</small></td>
           <td className="admin-money-cell"><strong>{money(booking.totalPrice, locale)}</strong></td>
           <td><Badge tone={statusTone(booking.status)}>{statusLabel(booking.status, t)}</Badge></td>
@@ -277,6 +243,7 @@ export function AdminCourtsPage() {
     return () => { live = false }
   }, [reload])
   async function toggleCourt(court) {
+    if (court.available && !window.confirm(ar ? 'هل تريد إيقاف الحجوزات الجديدة لهذا الملعب؟' : 'Disable new bookings for this court?')) return
     setBusyId(court.id); setNotice(null)
     try {
       await api.patch(`/admin/courts/${court.id}/availability`, { available: !court.available })
@@ -287,14 +254,14 @@ export function AdminCourtsPage() {
   }
   const groups = ['padel']
   return <>
-    <PageHeading eyebrow={ar ? 'مساحة الإدارة / 03' : 'ADMIN WORKSPACE / 03'} title={t.manageCourts} description={ar ? 'تحكّم في حالة الملاعب قبل أن يحجز العملاء.' : 'Control court availability before customers make a reservation.'} action={<span className="admin-count-chip">{courts.filter((c) => c.available).length} / {courts.length} {t.enabled}</span>} />
+    <PageHeading title={t.manageCourts} description={ar ? 'تحكّم في حالة الملاعب قبل أن يحجز العملاء.' : 'Control court availability before customers make a reservation.'} action={<span className="admin-count-chip">{courts.filter((c) => c.available).length} / {courts.length} {t.enabled}</span>} />
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <StatePanel loading={loading} error={error} retry={refresh} empty={courts.length === 0 ? t.noCourts : null}>
       <div className="admin-court-group-list">{groups.map((sport) => {
         const items = courts.filter((court) => court.sport === sport)
         if (!items.length) return null
-        return <section className="admin-court-group" key={sport}><div className="admin-court-group-heading"><div><span className="admin-sport-icon sport-padel">P</span><div><h2>{sportLabel(sport, t)}</h2><p>{items.length} {ar ? 'ملاعب' : items.length === 1 ? 'court' : 'courts'}</p></div></div><Badge tone={items.every((c) => c.available) ? 'success' : 'warning'}>{items.filter((c) => c.available).length} / {items.length} {t.enabled}</Badge></div>
-          <div className="admin-court-grid">{items.map((court) => <article className={`admin-court-card ${court.available ? '' : 'unavailable'}`} key={court.id}><div className="admin-court-card-top"><span className="admin-sport-icon sport-padel">P</span><Badge tone={court.available ? 'success' : 'danger'}>{court.available ? t.enabled : t.disabled}</Badge></div><h3>{court.name}</h3><p>{sportLabel(court.sport, t)} · {t.courtDetails}</p><div className="admin-court-card-bottom"><span><i className={court.available ? 'is-live' : ''} />{court.available ? (ar ? 'متاح للحجز' : 'Ready for bookings') : (ar ? 'موقوف مؤقتًا' : 'Temporarily unavailable')}</span><button className={`admin-button ${court.available ? 'secondary' : 'primary'}`} disabled={busyId === court.id} onClick={() => toggleCourt(court)}>{busyId === court.id ? '…' : court.available ? t.toggleUnavailable : t.toggleAvailable}</button></div></article>)}</div>
+        return <section className="admin-court-group" key={sport}><div className="admin-court-group-heading"><div><div><h2>{sportLabel(sport, t)}</h2><p>{items.length} {ar ? 'ملاعب' : items.length === 1 ? 'court' : 'courts'}</p></div></div><Badge tone={items.every((c) => c.available) ? 'success' : 'warning'}>{items.filter((c) => c.available).length} / {items.length} {t.enabled}</Badge></div>
+          <div className="admin-court-grid">{items.map((court) => <article className={`admin-court-card ${court.available ? '' : 'unavailable'}`} key={court.id}><div className="admin-court-card-top"><Badge tone={court.available ? 'success' : 'danger'}>{court.available ? t.enabled : t.disabled}</Badge></div><h3>{clubCourtName(court.name, ar ? 'ar' : 'en')}</h3><div className="admin-court-card-bottom"><button className={`admin-button ${court.available ? 'secondary' : 'primary'}`} disabled={busyId === court.id} onClick={() => toggleCourt(court)}>{busyId === court.id ? '…' : court.available ? t.toggleUnavailable : t.toggleAvailable}</button></div></article>)}</div>
         </section>
       })}</div>
     </StatePanel>
@@ -328,7 +295,7 @@ export function AdminPricingPage() {
       eveningPrice: Number(rate.eveningPrice),
       eveningTwoHourPrice: Number(rate.eveningTwoHourPrice),
     }
-    if (Object.values(prices).some((price) => !Number.isFinite(price) || price < 0)) { setNotice({ type: 'error', text: ar ? 'أدخل أسعارًا صحيحة.' : 'Enter valid non-negative prices.' }); return }
+    if ([rate.daytimePrice, rate.daytimeTwoHourPrice, rate.eveningPrice, rate.eveningTwoHourPrice].some(value => String(value).trim() === '') || Object.values(prices).some((price) => !Number.isFinite(price) || price < 0)) { setNotice({ type: 'error', text: ar ? 'أدخل أسعارًا صحيحة.' : 'Enter valid non-negative prices.' }); return }
     setSaving(rate.sport); setNotice(null)
     try {
       const { data } = await api.put(`/admin/pricing/${rate.sport}`, prices)
@@ -345,27 +312,27 @@ export function AdminPricingPage() {
     finally { setSaving('') }
   }
   return <>
-    <PageHeading eyebrow={ar ? 'مساحة الإدارة / 06' : 'ADMIN WORKSPACE / 06'} title={t.pricingTitle} description={t.pricingSub} action={<span className="admin-count-chip">JOD</span>} />
+    <PageHeading title={t.pricingTitle} description={t.pricingSub}  />
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <StatePanel loading={loading} error={error} retry={refresh} empty={rates.length === 0 ? t.noData : null}>
       <div className="admin-pricing-grid">{rates.map((rate) => <article className="admin-pricing-card" key={rate.sport}>
-        <div className="admin-pricing-card-top"><span className="admin-sport-icon sport-padel">P</span><Badge tone="neutral">{ar ? 'دينار أردني' : 'JORDANIAN DINAR'}</Badge></div>
+
         <h2>{sportLabel(rate.sport, t)}</h2><p>{ar ? 'سعر الملعب حسب موعد بدء الحجز' : 'Per-court rates based on the booking start time'}</p>
         <div className="admin-price-fields">
           <section className="admin-price-group">
             <h3>{t.daytime}</h3>
-            <label><span>{t.oneHour}</span><div><input type="number" min="0" step="0.5" value={rate.daytimePrice} onChange={(e) => updateRate(rate.sport, 'daytimePrice', e.target.value)} /><b>JOD</b></div></label>
-            <label><span>{t.twoHours}</span><div><input type="number" min="0" step="0.5" value={rate.daytimeTwoHourPrice} onChange={(e) => updateRate(rate.sport, 'daytimeTwoHourPrice', e.target.value)} /><b>JOD</b></div></label>
+            <label><span>{t.oneHour}</span><div><input type="number" min="0" step="0.5" value={rate.daytimePrice} onChange={(e) => updateRate(rate.sport, 'daytimePrice', e.target.value)} /><b>{ar ? 'د.أ.' : 'JOD'}</b></div></label>
+            <label><span>{t.twoHours}</span><div><input type="number" min="0" step="0.5" value={rate.daytimeTwoHourPrice} onChange={(e) => updateRate(rate.sport, 'daytimeTwoHourPrice', e.target.value)} /><b>{ar ? 'د.أ.' : 'JOD'}</b></div></label>
           </section>
           <section className="admin-price-group evening">
             <h3>{t.evening}</h3>
-            <label><span>{t.oneHour}</span><div><input type="number" min="0" step="0.5" value={rate.eveningPrice} onChange={(e) => updateRate(rate.sport, 'eveningPrice', e.target.value)} /><b>JOD</b></div></label>
-            <label><span>{t.twoHours}</span><div><input type="number" min="0" step="0.5" value={rate.eveningTwoHourPrice} onChange={(e) => updateRate(rate.sport, 'eveningTwoHourPrice', e.target.value)} /><b>JOD</b></div></label>
+            <label><span>{t.oneHour}</span><div><input type="number" min="0" step="0.5" value={rate.eveningPrice} onChange={(e) => updateRate(rate.sport, 'eveningPrice', e.target.value)} /><b>{ar ? 'د.أ.' : 'JOD'}</b></div></label>
+            <label><span>{t.twoHours}</span><div><input type="number" min="0" step="0.5" value={rate.eveningTwoHourPrice} onChange={(e) => updateRate(rate.sport, 'eveningTwoHourPrice', e.target.value)} /><b>{ar ? 'د.أ.' : 'JOD'}</b></div></label>
           </section>
         </div>
         <div className="admin-pricing-card-footer"><span>{rate.updatedAt ? `${ar ? 'آخر تحديث' : 'Updated'} ${dateTime(rate.updatedAt, locale)}` : t.price}</span><button className="admin-button primary" disabled={saving === rate.sport} onClick={() => saveRate(rate)}>{saving === rate.sport ? t.saving : t.save}<Icon name="check" size={15} /></button></div>
       </article>)}</div>
-      <div className="admin-info-callout"><span><Icon name="check" size={17} /></span><p>{ar ? 'سيتم حساب أسعار الحجوزات الجديدة باستخدام القيم المحفوظة. الحجوزات السابقة تحتفظ بالسعر الذي تم تأكيده وقت الحجز.' : 'New booking quotes use these saved rates. Existing reservations keep the price confirmed at booking time.'}</p></div>
+      <div className="admin-info-callout"><p>{ar ? 'سيتم حساب أسعار الحجوزات الجديدة باستخدام القيم المحفوظة. الحجوزات السابقة تحتفظ بالسعر الذي تم تأكيده وقت الحجز.' : 'New booking quotes use these saved rates. Existing reservations keep the price confirmed at booking time.'}</p></div>
     </StatePanel>
   </>
 }
@@ -390,12 +357,12 @@ export function AdminCustomersPage() {
     return matchesSearch && matchesFilter
   }), [customers, search, filter])
   return <>
-    <PageHeading eyebrow={ar ? 'مساحة الإدارة / 07' : 'ADMIN WORKSPACE / 07'} title={t.customersTitle} description={t.customersSub} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
+    <PageHeading title={t.customersTitle} description={t.customersSub} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
     <section className="admin-panel admin-list-panel">
       <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchCustomers} aria-label={t.searchCustomers} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
-      <div className="admin-filter-row" data-lenis-prevent>{[{ key: 'all', label: t.all }, { key: 'active', label: t.active }, { key: 'inactive', label: t.inactive }].map((item) => <button type="button" key={item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
+      <div className="admin-filter-row" data-lenis-prevent>{[{ key: 'all', label: t.all }, { key: 'active', label: t.active }, { key: 'inactive', label: t.inactive }].map((item) => <button type="button" key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? t.noCustomers : null}>
-        <div className="admin-table-scroll" data-lenis-prevent><table className="admin-table"><thead><tr><th>{t.name}</th><th>{t.contact}</th><th>{t.bookings}</th><th>{t.bookingValue}</th><th>{t.joined}</th><th>{t.account}</th></tr></thead><tbody>
+        <div className="admin-table-scroll" role="region" aria-label={ar ? 'جدول السجلات' : 'Records table'} tabIndex={0} data-lenis-prevent><table className="admin-table"><thead><tr><th>{t.name}</th><th>{t.contact}</th><th>{t.bookings}</th><th>{t.bookingValue}</th><th>{t.joined}</th><th>{t.account}</th></tr></thead><tbody>
         {filtered.map((customer) => <tr key={customer.id}><td><div className="admin-customer-cell"><span>{customer.fullName.trim().slice(0, 1).toUpperCase()}</span><strong>{customer.fullName}</strong></div><small className="admin-id">#{customer.id}</small></td><td><strong>{customer.email}</strong>{customer.phone ? <PhoneContact phone={customer.phone} /> : <small>{t.emptyValue}</small>}</td><td><strong>{customer.bookingCount}</strong><small>{ar ? 'حجوزات غير ملغاة' : 'non-cancelled bookings'}</small></td><td className="admin-money-cell"><strong>{money(customer.bookingValue, locale)}</strong></td><td>{dateOnly(customer.createdAt, locale)}</td><td><Badge tone={customer.active ? 'success' : 'danger'}>{customer.active ? t.active : t.inactive}</Badge></td></tr>)}
         </tbody></table></div>
       </StatePanel>
@@ -436,6 +403,7 @@ export function AdminContactMessagesPage() {
   }), [messages, search, filter])
 
   async function updateStatus(message, status) {
+    if (status === 'archived' && !window.confirm(ar ? 'هل تريد أرشفة هذه الرسالة؟' : 'Archive this contact message?')) return
     setBusyId(message.id)
     setNotice(null)
     try {
@@ -453,14 +421,14 @@ export function AdminContactMessagesPage() {
   const statusTone = (status) => status === 'new' ? 'warning' : status === 'replied' ? 'success' : status === 'archived' ? 'danger' : 'neutral'
 
   return <>
-    <PageHeading eyebrow={labels.eyebrow} title={labels.title} description={labels.subtitle} action={<span className="admin-count-chip">{filtered.length} {labels.count}</span>} />
+    <PageHeading title={labels.title} description={labels.subtitle} action={<span className="admin-count-chip">{filtered.length} {labels.count}</span>} />
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <section className="admin-panel admin-list-panel admin-contact-messages-panel">
       <div className="admin-toolbar">
         <div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={labels.search} aria-label={labels.search} /></div>
         <button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{ar ? 'تحديث' : 'Refresh'}</button>
       </div>
-      <div className="admin-filter-row" data-lenis-prevent>{['all', 'new', 'read', 'replied', 'archived'].map((status) => <button type="button" key={status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{statusLabel(status)}</button>)}</div>
+      <div className="admin-filter-row" data-lenis-prevent>{['all', 'new', 'read', 'replied', 'archived'].map((status) => <button type="button" key={status} aria-pressed={filter === status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{statusLabel(status)}</button>)}</div>
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? labels.noMessages : null}>
         <div className="admin-contact-message-list">
           {filtered.map((message) => <article key={message.id} className={`admin-contact-message-card ${message.status === 'new' ? 'is-new' : ''}`}>
@@ -471,7 +439,7 @@ export function AdminContactMessagesPage() {
             <div className="admin-contact-message-meta"><span><b>{labels.sport}:</b> {sportLabel(message.sport, t)}</span><span><b>{labels.preferred}:</b> {message.preferredTime || '—'}</span></div>
             <p className="admin-contact-message-body">{message.message}</p>
             <div className="admin-contact-message-actions">
-              <a className="admin-button secondary" href={`tel:${message.phone.replace(/[^+\d]/g, '')}`}>{ar ? 'اتصال' : 'Call member'}</a>
+              {phoneHref(message.phone) && <a className="admin-button secondary" href={phoneHref(message.phone)}>{ar ? 'اتصال' : 'Call member'}</a>}
               <button className="admin-button secondary" disabled={busyId === message.id || message.status === 'read'} onClick={() => updateStatus(message, 'read')}>{busyId === message.id ? '…' : labels.markRead}</button>
               <button className="admin-button primary" disabled={busyId === message.id || message.status === 'replied'} onClick={() => updateStatus(message, 'replied')}>{busyId === message.id ? '…' : labels.markReplied}</button>
               <button className="admin-button danger" disabled={busyId === message.id || message.status === 'archived'} onClick={() => updateStatus(message, 'archived')}>{labels.archive}</button>

@@ -1,3 +1,4 @@
+import { MemberLoading } from './MemberStates'
 import { useCallback, useEffect, useState } from 'react'
 import api, { errorMessage } from '../api'
 import './my-bookings.css'
@@ -209,7 +210,7 @@ function formatMoney(value, locale) {
   const amount = Number(value || 0).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-JO', {
     minimumFractionDigits: 0, maximumFractionDigits: 2,
   })
-  return `${amount} JOD`
+  return `${amount} ${locale === 'ar' ? 'د.أ.' : 'JOD'}`
 }
 
 function formatCourtName(name, locale, copy) {
@@ -297,7 +298,6 @@ function WaitlistOfferCard({ entry, onAccept, onDecline, loading, copy }) {
   return (
       <article className="mb-booking-card mym-offer-card">
         <div className="mb-booking-main">
-          <div className="mym-offer-icon" aria-hidden="true"><span>✓</span></div>
           <div className="mb-booking-details">
             <div className="mb-booking-eyebrow"><span>{copy.offerKicker}</span><i /></div>
             <h3>{copy.offerTitle}</h3>
@@ -317,9 +317,13 @@ function WaitlistOfferCard({ entry, onAccept, onDecline, loading, copy }) {
   )
 }
 
+function isActiveReservation(reservation) {
+  const endsAt = Date.parse(reservation.endsAt)
+  return normalizeStatus(reservation.status) === 'confirmed' && (!Number.isFinite(endsAt) || endsAt > Date.now())
+}
+
 function ReservationCard({ reservation, locale, copy, onCancel, busyId }) {
-  const status = normalizeStatus(reservation.status)
-  const isActive = status === 'confirmed'
+  const isActive = Boolean(onCancel)
   const canCancel = Boolean(reservation.cancellable && isActive)
   const sport = sportLabel(reservation.sport, locale, copy)
   const court = formatCourtName(reservation.courtName, locale, copy)
@@ -375,8 +379,7 @@ function WaitlistCard({ entry, onLeave, busyId, locale, copy }) {
   return (
       <article className="mb-booking-card mym-waitlist-card">
         <div className="mb-booking-main">
-          <div className="mym-waitlist-icon" aria-hidden="true"><span>⌛</span></div>
-          <div className="mb-booking-details">
+                    <div className="mb-booking-details">
             <div className="mb-booking-eyebrow"><span>{copy.waitlist}</span><i /><span>{copy.positionNumber} {Number(entry.position || 0).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-GB')}</span></div>
             <h3>{copy.position} #{Number(entry.position || 0).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-GB')}</h3>
             <p className="mb-booking-time">{copy.waitDescription}</p>
@@ -393,11 +396,11 @@ function WaitlistCard({ entry, onLeave, busyId, locale, copy }) {
   )
 }
 
-function SectionHeading({ id, number, title, hint, count, locale, countLabel }) {
+function SectionHeading({ id, title, hint, count, locale, countLabel }) {
   return (
       <div className="mb-section-heading">
         <div>
-          <span className="mb-section-kicker">{number} / {title}</span>
+
           <h2 id={id}>{title}</h2>
           <p>{hint}</p>
         </div>
@@ -447,7 +450,7 @@ export default function MyMatchmaking() {
           setWaitlist(Array.isArray(wlData.data) ? wlData.data : [])
           setError('')
         })
-        .catch((err) => setError(errorMessage(err) || COPY[readLocale()].loadFailed))
+        .catch((err) => setError((readLocale() !== 'ar' && errorMessage(err)) || COPY[readLocale()].loadFailed))
         .finally(() => setLoading(false))
   }, [])
 
@@ -464,7 +467,7 @@ export default function MyMatchmaking() {
       setNotice({ type: 'success', text: copy.cancelSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: errorMessage(err) || copy.cancelFailed })
+      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.cancelFailed })
     } finally {
       setBusyId(null)
     }
@@ -479,7 +482,7 @@ export default function MyMatchmaking() {
       setNotice({ type: 'success', text: copy.leaveSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: errorMessage(err) || copy.leaveFailed })
+      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.leaveFailed })
     } finally {
       setBusyId(null)
     }
@@ -493,7 +496,7 @@ export default function MyMatchmaking() {
       setNotice({ type: 'success', text: copy.acceptSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: errorMessage(err) || copy.acceptFailed })
+      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.acceptFailed })
     } finally {
       setBusyId(null)
     }
@@ -508,17 +511,17 @@ export default function MyMatchmaking() {
       setNotice({ type: 'success', text: copy.declineSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: errorMessage(err) || copy.declineFailed })
+      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.declineFailed })
     } finally {
       setBusyId(null)
     }
   }
 
   const activeReservations = (reservations || [])
-      .filter((reservation) => normalizeStatus(reservation.status) === 'confirmed')
+      .filter(isActiveReservation)
       .sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime())
   const pastReservations = (reservations || [])
-      .filter((reservation) => normalizeStatus(reservation.status) !== 'confirmed')
+      .filter(reservation => !isActiveReservation(reservation))
       .sort((a, b) => new Date(b.startsAt || b.createdAt || 0).getTime() - new Date(a.startsAt || a.createdAt || 0).getTime())
   const activeWaitlist = waitlist.filter((entry) => ['waiting', 'offered'].includes(normalizeStatus(entry.status)))
   const offeredEntries = activeWaitlist.filter((entry) => normalizeStatus(entry.status) === 'offered')
@@ -527,7 +530,7 @@ export default function MyMatchmaking() {
   if (loading && reservations === null) {
     return (
         <section className="my-bookings-page my-matchmaking-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
-          <div className="mb-loading"><span className="mb-spinner" /><span>{copy.loading}</span></div>
+          <MemberLoading label={copy.loading} />
         </section>
     )
   }
@@ -547,8 +550,8 @@ export default function MyMatchmaking() {
       <section className="my-bookings-page my-matchmaking-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
         <header className="mb-page-hero">
           <div className="mb-hero-copy">
-            <span className="mb-page-tag"><span className="mb-page-tag-dot" />{copy.tag}</span>
-            <h1>{copy.title}<br /><span>{copy.titleAccent}</span></h1>
+
+            <h1>{isArabic ? 'مبارياتي.' : 'My matches.'}</h1>
             <p>{copy.intro}</p>
           </div>
           <aside className="mb-hero-summary" aria-label={copy.summaryLabel}>

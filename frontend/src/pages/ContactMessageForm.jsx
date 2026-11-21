@@ -29,7 +29,7 @@ export default function ContactMessageForm({ locale = 'en', phone = '', variant 
       setSubmitted(true)
     } catch (err) {
       const responseMessage = err.response?.data?.detail || err.response?.data?.message || err.response?.data?.error
-      setError(responseMessage || (isArabic
+      setError((!isArabic && responseMessage) || (isArabic
         ? 'تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى.'
         : 'We could not send your message. Please try again.'))
     } finally {
@@ -37,7 +37,8 @@ export default function ContactMessageForm({ locale = 'en', phone = '', variant 
     }
   }
 
-  const className = `contact-form video-contact-form${variant === 'club' ? ' club-contact-form' : ''}`
+  const editorial = variant === 'editorial'
+  const className = editorial ? 'club-contact-form-home' : `contact-form video-contact-form${variant === 'club' ? ' club-contact-form' : ''}`
 
   return (
     <form className={className} onSubmit={handleSubmit}>
@@ -61,11 +62,11 @@ export default function ContactMessageForm({ locale = 'en', phone = '', variant 
       {error && <div className="contact-feedback error" role="alert">{error}</div>}
       {submitted && <div className="contact-feedback success" role="status">{isArabic ? 'تم إرسال رسالتك بنجاح. سيتواصل معك فريق نادي 40 Love للبادل والمقهى قريبًا.' : 'Your message was sent successfully. The 40 Love Padel Club & Cafe team will follow up soon.'}</div>}
       <div className="form-actions">
-        <button className="btn btn-accent" type="submit" disabled={submitting}>
+        <button className={editorial ? 'club-button' : 'btn btn-accent'} type="submit" disabled={submitting}>
           {submitting ? (isArabic ? 'جارٍ الإرسال…' : 'Sending…') : submitted ? (isArabic ? 'تم الإرسال' : 'Message Sent') : (isArabic ? 'إرسال الرسالة' : 'Send Message')}
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
         </button>
-        <span>{isArabic ? 'نرد خلال بضع ساعات.' : 'We reply within a few hours.'}</span>
+        {!editorial && <span>{isArabic ? 'نرد خلال بضع ساعات.' : 'We reply within a few hours.'}</span>}
       </div>
     </form>
   )
