@@ -1,9 +1,11 @@
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, Outlet, useOutletContext, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import { AuthProvider } from './AuthContext'
 import AuthBootstrapNotice from './AuthBootstrapNotice'
 import Layout from './Layout'
+import { MemberLoading } from './pages/MemberStates'
 import Home from './pages/Home'
+import ClubLegal from './pages/ClubLegal'
 import Book from './pages/Book'
 import Login from './pages/Login'
 import MyBookings from './pages/MyBookings'
@@ -16,22 +18,23 @@ import AdminLogin from './pages/AdminLogin'
 import AdminLayout from './admin/AdminLayout'
 import { AdminBookingsPage, AdminCourtsPage, AdminCustomersPage, AdminContactMessagesPage, AdminOverviewPage, AdminPricingPage } from './admin/AdminPages'
 import { AdminMatchmakingPage } from './admin/AdminMatchmakingPage'
-import TennisBallBackground from './TennisBallBackground'
+import { AdminSession } from './admin/AdminUI'
 import ScrollAnimations from './animation/ScrollAnimations'
 
-function Protected({ children }) {
+function Protected() {
+  const context = useOutletContext()
   const { user, loading, profileError, retryProfile, logout } = useAuth()
   const location = useLocation()
-  if (loading) return <p className="page muted">Loading...</p>
-  if (profileError) return <AuthBootstrapNotice locale={localStorage.getItem('serva-locale')} error={profileError} onRetry={retryProfile} onSignOut={logout} />
-  return user ? children : <Navigate to="/login" state={{ from: location }} replace />
+  if (loading) return <MemberLoading label={context.locale === 'ar' ? 'جارٍ التحقق من الجلسة…' : 'Checking your session…'} />
+  if (profileError) return <AuthBootstrapNotice member locale={context.locale} error={profileError} onRetry={retryProfile} onSignOut={logout} />
+  return user ? <Outlet context={context} /> : <Navigate to="/login" state={{ from: location }} replace />
 }
 
 function AdminProtected() {
   const { user, loading, profileError, retryProfile, logout } = useAuth()
   const location = useLocation()
-  if (loading) return <div className="admin-state-panel"><span className="admin-spinner" /><strong>Checking administrator access…</strong></div>
-  if (profileError) return <AuthBootstrapNotice locale={localStorage.getItem('serva-locale')} error={profileError} onRetry={retryProfile} onSignOut={logout} />
+  if (loading) return <AdminSession />
+  if (profileError) return <AdminSession error={profileError} onRetry={retryProfile} onSignOut={logout} />
   if (!user) return <Navigate to="/admin/login" state={{ from: location }} replace />
   if (String(user.role).toLowerCase() !== 'admin') return <Navigate to="/admin/login?unauthorized=1" state={{ from: location }} replace />
   return <AdminLayout />
@@ -43,19 +46,26 @@ export default function App() {
         <ScrollAnimations />
         <AuthProvider>
           <div className="app-shell">
-            <TennisBallBackground />
             <div className="app-route-content">
               <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
                 {/* Public page hosted by the Outlet-based layout (do not pass it as ignored children). */}
                 <Route element={<Layout />}>
+                  <Route index element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/terms-of-service" element={<ClubLegal kind="terms" />} />
+                  <Route path="/privacy-policy" element={<ClubLegal kind="privacy" />} />
                   <Route path="/courts" element={<ClubPage />} />
                   <Route path="/pricing" element={<ClubPage />} />
                   <Route path="/gallery" element={<ClubPage />} />
                   <Route path="/contact" element={<ClubPage />} />
                   <Route path="/matchmaking" element={<MatchmakingPage />} />
+                  <Route element={<Protected />}>
+                    <Route path="/book" element={<Book />} />
+                    <Route path="/bookings" element={<MyBookings />} />
+                    <Route path="/my-matchmaking" element={<MyMatchmaking />} />
+                    <Route path="/profile" element={<Profile />} />
+                  </Route>
                 </Route>
 
                 <Route path="/admin/login" element={<AdminLogin />} />
@@ -67,13 +77,6 @@ export default function App() {
                   <Route path="messages" element={<AdminContactMessagesPage />} />
                   <Route path="pricing" element={<AdminPricingPage />} />
                   <Route path="customers" element={<AdminCustomersPage />} />
-                </Route>
-
-                <Route element={<Protected><Layout /></Protected>}>
-                  <Route path="/book" element={<Book />} />
-                  <Route path="/bookings" element={<MyBookings />} />
-                  <Route path="/my-matchmaking" element={<MyMatchmaking />} />
-                  <Route path="/profile" element={<Profile />} />
                 </Route>
 
                 <Route path="*" element={<Navigate to="/" replace />} />

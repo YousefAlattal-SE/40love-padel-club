@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { addDays, format, parseISO } from 'date-fns'
-import { motion } from 'framer-motion'
+import { MemberDialog, MemberLoading } from './MemberStates'
 import api, { errorMessage } from '../api'
 import { useAuth } from '../auth'
 import { confirmBookingWithSavedPhone, isPhoneNumberRequiredError, persistContactPhoneThenConfirm } from '../bookingPhoneFlow'
@@ -9,14 +9,14 @@ import { normalizeContactPhone } from '../contactPhone'
 import { formatTime } from '../format'
 
 const SPORT_DETAILS = {
-    padel: { en: 'Padel', ar: 'بادل', mark: 'P' },
+    padel: { en: 'Padel', ar: 'بادل' },
 }
 
 const COPY = {
     en: {
         club: '40 LOVE PADEL CLUB & CAFE', location: 'AMMAN, JORDAN', title: 'Your game.', titleAccent: 'Your time.',
         intro: 'Choose a date, find an open Padel slot, and get straight to the good part. Your next session starts here.',
-        bookAhead: 'Book up to 7 days ahead', flexible: 'Flexible 1+ hour sessions', openDaily: 'OPEN DAILY', courtHours: 'COURT HOURS', hoursLine: '7 AM — 3 AM',
+        bookAhead: 'Book up to 7 days ahead', flexible: 'Flexible 1+ hour sessions', openDaily: 'OPEN DAILY', courtHours: 'COURT HOURS', hoursLine: '7 AM – 3 AM',
         premiumCourts: 'Padel courts', padelOnly: 'Padel only', openEveryDay: 'Hours open daily', bookingWindow: 'Days booking window',
         yourSession: '01 / YOUR SESSION', whenPlaying: 'When are we playing?', sessionHelp: 'Choose a date for your Padel session.', todayWindow: 'Today + next 7 days',
         chooseDate: 'Choose a date', liveAvailability: '02 / LIVE AVAILABILITY', findTime: 'Find your time.',
@@ -25,7 +25,7 @@ const COPY = {
         tryAnother: 'Try another date to find your next session.', booked: 'Booked', past: 'Past', book: 'Book', peakHour: 'Evening pricing', offPeakHour: 'Daytime pricing',
         available: 'Available', peakPricing: 'Evening price', alreadyBooked: 'Already booked', priceUnit: 'Hourly price · 2-hour bundle shown at confirmation',
         priceNote: 'Rates follow the booking start time. Longer sessions use the two-hour bundle for every complete pair of hours.',
-        confirmStep: '03 / CONFIRM YOUR SESSION', lockCourt: 'Lock in your court.', selectedTime: 'Your selected playing time', duration: 'Duration', hour: 'hour', hours: 'hours',
+        lockCourt: 'Lock in your court.', selectedTime: 'Your selected playing time', duration: 'Duration', hour: 'hour', hours: 'hours',
         totalPrice: 'Total session price', payAtClub: 'Pay at the club after your session.', confirmBooking: 'Confirm booking', reserving: 'Reserving your court...', cancelSelection: 'Cancel selection',
         confidence: 'Play with confidence.', assurance: 'Your selected slot is checked against live availability before your booking is confirmed.',
         dismiss: 'Dismiss message', dismissError: 'Dismiss error', noCourt: 'Court',
@@ -39,7 +39,7 @@ const COPY = {
     ar: {
         club: 'نادي 40 Love للبادل والمقهى', location: 'عمّان، الأردن', title: 'لعبتك.', titleAccent: 'على وقتك.',
         intro: 'اختر التاريخ واعثر على موعد بادل متاح. تبدأ جلستك القادمة من هنا.',
-        bookAhead: 'احجز قبل ٧ أيام', flexible: 'جلسات مرنة تبدأ من ساعة', openDaily: 'مفتوح يوميًا', courtHours: 'ساعات الملاعب', hoursLine: '٧ صباحًا — ٣ صباحًا',
+        bookAhead: 'احجز قبل ٧ أيام', flexible: 'جلسات مرنة تبدأ من ساعة', openDaily: 'مفتوح يوميًا', courtHours: 'ساعات الملاعب', hoursLine: '٧ صباحًا – ٣ صباحًا',
         premiumCourts: 'ملاعب بادل', padelOnly: 'بادل فقط', openEveryDay: 'ساعة عمل يوميًا', bookingWindow: 'أيام متاحة للحجز',
         yourSession: '٠١ / جلستك', whenPlaying: 'متى نلعب؟', sessionHelp: 'اختر التاريخ لجلسة البادل.', todayWindow: 'اليوم + الأيام السبعة القادمة',
         chooseDate: 'اختر التاريخ', liveAvailability: '٠٢ / المواعيد المتاحة', findTime: 'اختر موعدك.',
@@ -48,7 +48,7 @@ const COPY = {
         tryAnother: 'جرّب تاريخًا آخر للعثور على موعد مناسب.', booked: 'محجوز', past: 'انتهى', book: 'احجز', peakHour: 'سعر الفترة المسائية', offPeakHour: 'سعر الفترة النهارية',
         available: 'متاح', peakPricing: 'سعر المساء', alreadyBooked: 'محجوز مسبقًا', priceUnit: 'سعر الساعة · يظهر سعر الساعتين عند التأكيد',
         priceNote: 'تتبع الأسعار وقت بدء الحجز. تستخدم الجلسات الأطول سعر الساعتين لكل فترة كاملة من ساعتين.',
-        confirmStep: '٠٣ / تأكيد جلستك', lockCourt: 'ثبّت حجز ملعبك.', selectedTime: 'وقت اللعب الذي اخترته', duration: 'المدة', hour: 'ساعة', hours: 'ساعات',
+        lockCourt: 'ثبّت حجز ملعبك.', selectedTime: 'وقت اللعب الذي اخترته', duration: 'المدة', hour: 'ساعة', hours: 'ساعات',
         totalPrice: 'السعر الإجمالي للجلسة', payAtClub: 'الدفع في النادي بعد انتهاء جلستك.', confirmBooking: 'تأكيد الحجز', reserving: 'جارٍ حجز ملعبك...', cancelSelection: 'إلغاء الاختيار',
         confidence: 'العب بكل ثقة.', assurance: 'نتحقق من توفر الموعد مباشرة قبل تأكيد حجزك.',
         dismiss: 'إخفاء الرسالة', dismissError: 'إخفاء الخطأ', noCourt: 'ملعب',
@@ -83,7 +83,7 @@ function buildDays() {
 
 const money = (value, locale = 'en') => {
     const amount = Number(value).toLocaleString(locale === 'ar' ? 'ar-JO-u-nu-latn' : 'en-JO', { maximumFractionDigits: 2 })
-    return `${amount} JOD`
+    return `${amount} ${locale === 'ar' ? 'د.أ.' : 'JOD'}`
 }
 
 function getLocalizedError(message, locale) {
@@ -138,8 +138,10 @@ export default function Book() {
 
     const isArabic = locale === 'ar'
     const t = COPY[locale]
-    const [date, setDate] = useState(() => requestedDate || format(days[0], 'yyyy-MM-dd'))
+    const [date, setDate] = useState(() => days.some(day => format(day, 'yyyy-MM-dd') === requestedDate) ? requestedDate : format(days[0], 'yyyy-MM-dd'))
     const sport = 'padel'
+    const [availabilityError, setAvailabilityError] = useState(false)
+    const [refresh, setRefresh] = useState(0)
     const [data, setData] = useState(null)
     const [selected, setSelected] = useState(null) // { court, index }
     const [hours, setHours] = useState(1)
@@ -154,32 +156,23 @@ export default function Book() {
     const bookingRequestInFlight = useRef(false)
     const phoneSubmitInFlight = useRef(false)
 
-    useEffect(() => {
-        if (!phoneModal) return undefined
-        const handleEscape = (event) => {
-            if (event.key === 'Escape' && !phoneSaving) {
-                setPhoneModal(false)
-                setContactPhone('')
-                setPhoneError('')
-                setPhoneSaveError('')
-            }
-        }
-        window.addEventListener('keydown', handleEscape)
-        return () => window.removeEventListener('keydown', handleEscape)
-    }, [phoneModal, phoneSaving])
-
-    const load = useCallback(
-        () => api.get('/availability', { params: { date, sport } })
-            .then((res) => setData(res.data))
-            .catch((err) => setError(errorMessage(err))),
-        [date, sport],
-    )
 
     useEffect(() => {
-        load()
-    }, [load])
+        const controller = new AbortController()
+        api.get('/availability', { params: { date, sport }, signal: controller.signal })
+            .then(({ data }) => { if (!controller.signal.aborted) setData(data) })
+            .catch(() => { if (!controller.signal.aborted) setAvailabilityError(true) })
+        return () => controller.abort()
+    }, [date, sport, refresh])
+
+    function refreshAvailability() {
+        setAvailabilityError(false)
+        setRefresh(value => value + 1)
+    }
 
     function changeDate(nextDate) {
+        if (nextDate === date) return
+        setAvailabilityError(false)
         setDate(nextDate)
         setSelected(null)
         setData(null)
@@ -209,7 +202,7 @@ export default function Book() {
         ? Math.floor(hours / 2) * Number(startSlot.twoHourPrice) + (hours % 2) * Number(startSlot.price)
         : 0
     const headerSlots = data?.courts?.[0]?.slots ?? []
-    const courtCount = data?.courts?.length ?? 3
+    const courtCount = data?.courts?.length
     const selectedDate = parseISO(date)
     const selectedSportName = SPORT_DETAILS[sport][isArabic ? 'ar' : 'en']
 
@@ -256,7 +249,7 @@ export default function Book() {
         } finally {
             bookingRequestInFlight.current = false
             setBusy(false)
-            load() // refresh the grid so it shows the latest availability
+            refreshAvailability()
         }
     }
 
@@ -308,45 +301,16 @@ export default function Book() {
 
     return (
         <div className="booking-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
-            <section className="booking-hero">
-                <div className="booking-hero-copy">
-                    <div className="booking-kicker"><span className="booking-kicker-dot" /> {t.club} <span className="booking-kicker-separator">/</span> {t.location}</div>
-                    <h1 className="booking-title">{t.title}<br /><span>{t.titleAccent}</span></h1>
-                    <p className="booking-intro">{t.intro}</p>
-                    <div className="booking-hero-points">
-                        <span><i className="booking-check">✓</i> {t.bookAhead}</span>
-                        <span><i className="booking-check">✓</i> {t.flexible}</span>
-                    </div>
-                </div>
-                <div className="booking-hero-visual" aria-label={isArabic ? 'رسم توضيحي لملعب نادي 40 Love للبادل والمقهى' : '40 Love Padel Club & Cafe court illustration'} role="img">
-                    <div className="booking-visual-top"><span className="booking-live-dot" /> {t.openDaily}</div>
-                    <div className="booking-court-art">
-                        <span className="court-line court-line-outer" />
-                        <span className="court-line court-line-middle" />
-                        <span className="court-line court-line-center" />
-                        <span className="court-line court-line-service-one" />
-                        <span className="court-line court-line-service-two" />
-                        <span className="court-ball" />
-                    </div>
-                    <div className="booking-visual-bottom"><div><span>{t.courtHours}</span><strong>{t.hoursLine}</strong></div><div className="booking-visual-arrow">↗</div></div>
-                </div>
-            </section>
-
-            <section className="booking-stats" aria-label={isArabic ? 'معلومات النادي' : 'Club facts'}>
-                <div className="booking-stat"><strong>03</strong><span>{t.premiumCourts}</span></div>
-                <div className="booking-stat"><strong>01</strong><span>{t.padelOnly}</span></div>
-                <div className="booking-stat"><strong>20<span className="booking-stat-unit">h</span></strong><span>{t.openEveryDay}</span></div>
-                <div className="booking-stat"><strong>07</strong><span>{t.bookingWindow}</span></div>
-            </section>
+            <header className="member-title"><h1>{isArabic ? 'احجز ملعبًا.' : 'Book a court.'}</h1><p>{t.bookAhead} · {t.hoursLine}</p></header>
 
             <section className="booking-panel booking-session-panel">
                 <div className="booking-panel-heading">
-                    <div><span className="booking-step-label">{t.yourSession}</span><h2>{t.whenPlaying}</h2><p>{t.sessionHelp}</p></div>
-                    <span className="booking-window-pill"><span className="booking-calendar-mark">▦</span> {t.todayWindow}</span>
+                    <div><h2>{t.whenPlaying}</h2><p>{t.sessionHelp}</p></div>
+                    <span className="booking-window-pill">{t.todayWindow}</span>
                 </div>
 
                 <div className="booking-control-group">
-                    <div className="booking-control-title"><span className="booking-control-number">A</span><span>{t.chooseDate}</span></div>
+                    <div className="booking-control-title"><span>{t.chooseDate}</span></div>
                     <div className="booking-days" aria-label={t.chooseDate} data-lenis-prevent>
                         {days.map((day) => {
                             const key = format(day, 'yyyy-MM-dd')
@@ -369,12 +333,13 @@ export default function Book() {
 
             <section className="booking-panel booking-availability-panel">
                 <div className="booking-panel-heading booking-availability-heading">
-                    <div><span className="booking-step-label">{t.liveAvailability}</span><h2>{t.findTime}</h2><p>{t.availabilityHelp}</p></div>
-                    <div className="booking-availability-meta"><span className="booking-live-dot" /> {t.liveSlots} <span className="booking-meta-divider">/</span> {courtCount} {courtCount === 1 ? (isArabic ? t.court : t.court) : t.courts}</div>
+                    <div><h2>{t.findTime}</h2><p>{t.availabilityHelp}</p></div>
+                    <div className="booking-availability-meta"><span className="booking-live-dot" /> {t.liveSlots} <span className="booking-meta-divider">/</span> {courtCount !== undefined && `${courtCount} ${courtCount === 1 ? t.court : t.courts}`}</div>
                 </div>
 
-                {!data && !error && (
-                    <div className="booking-loading" role="status"><span className="booking-spinner" /><div><strong>{t.checking}</strong><span>{t.latestTimes}</span></div></div>
+                {availabilityError && <div role="alert"><p>{isArabic ? 'تعذّر تحميل المواعيد المتاحة.' : 'Available times could not be loaded.'}</p><button type="button" onClick={refreshAvailability}>{isArabic ? 'حاول مجددًا' : 'Try again'}</button></div>}
+                {!data && !availabilityError && (
+                    <MemberLoading label={t.checking} />
                 )}
 
                 {data && data.courts.length === 0 && (
@@ -389,7 +354,7 @@ export default function Book() {
                                 <tbody>
                                 {data.courts.map((court) => (
                                     <tr key={court.courtId}>
-                                        <th scope="row" className="booking-court-name"><span className="booking-court-badge">{SPORT_DETAILS[sport].mark}</span><span><strong>{localCourtName(court.courtName, locale)}</strong><small>{selectedSportName}</small></span></th>
+                                        <th scope="row" className="booking-court-name"><span><strong>{localCourtName(court.courtName, locale)}</strong><small>{selectedSportName}</small></span></th>
                                         {court.slots.map((slot, index) => {
                                             const chosen = isChosen(court, index)
                                             const statusLabel = slot.status === 'booked' ? t.booked : slot.status === 'past' ? t.past : `${t.book} ${formatTime(slot.startsAt)} ${isArabic ? 'مقابل' : 'for'} ${money(slot.price, locale)}`
@@ -403,7 +368,7 @@ export default function Book() {
                                                         aria-label={`${localCourtName(court.courtName, locale)}, ${statusLabel}`}
                                                         title={slot.peak ? t.peakHour : t.offPeakHour}
                                                     >
-                                                        {slot.status === 'booked' ? <span className="booking-slot-unavailable">{t.booked}</span> : slot.status === 'past' ? <span className="booking-slot-past">—</span> : <><strong>{Number(slot.price)}</strong><small>JOD</small></>}
+                                                        {slot.status === 'booked' ? <span className="booking-slot-unavailable">{t.booked}</span> : slot.status === 'past' ? <span className="booking-slot-past">—</span> : <><strong>{Number(slot.price)}</strong><small>{isArabic ? 'د.أ.' : 'JOD'}</small></>}
                                                     </button>
                                                 </td>
                                             )
@@ -419,12 +384,12 @@ export default function Book() {
             </section>
 
             {selected && chosenSlots.length > 0 && (
-                <motion.section className="booking-confirm-panel" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }} aria-label={t.confirmStep}>
+                <section className="booking-confirm-panel" aria-label={t.lockCourt}>
                     <div className="booking-confirm-main">
-                        <span className="booking-step-label">{t.confirmStep}</span>
+
                         <h2>{t.lockCourt}</h2>
-                        <div className="booking-confirm-court"><span className="booking-confirm-mark">{SPORT_DETAILS[sport].mark}</span><div><strong>{localCourtName(selected.court.courtName, locale)}</strong><span>{selectedSportName} <i>·</i> {localDateLabel(selectedDate, locale)}</span></div></div>
-                        <div className="booking-confirm-time"><span className="booking-confirm-clock">◷</span><div><strong>{formatTime(chosenSlots[0].startsAt)} <i>—</i> {formatTime(chosenSlots[chosenSlots.length - 1].endsAt)}</strong><span>{t.selectedTime}</span></div></div>
+                        <div className="booking-confirm-court"><div><strong>{localCourtName(selected.court.courtName, locale)}</strong><span>{selectedSportName} <i>·</i> {localDateLabel(selectedDate, locale)}</span></div></div>
+                        <div className="booking-confirm-time"><span className="booking-confirm-clock">◷</span><div><strong>{formatTime(chosenSlots[0].startsAt)} <i>–</i> {formatTime(chosenSlots[chosenSlots.length - 1].endsAt)}</strong><span>{t.selectedTime}</span></div></div>
                     </div>
                     <div className="booking-confirm-summary">
                         <label className="booking-duration-label" htmlFor="booking-duration"><span>{t.duration}</span><select id="booking-duration" value={hours} onChange={(event) => setHours(Number(event.target.value))}>
@@ -432,20 +397,17 @@ export default function Book() {
                         </select></label>
                         <div className="booking-total-row"><span>{t.totalPrice}</span><strong>{money(total, locale)}</strong></div>
                         <p className="booking-pricing-note">{t.priceNote}</p>
-                        <p className="booking-payment-note"><span>✓</span> {t.payAtClub}</p>
+                        <p className="booking-payment-note">{t.payAtClub}</p>
                         <button className="booking-confirm-button" type="button" onClick={book} disabled={busy}>{busy ? <><span className="booking-button-spinner" /> {t.reserving}</> : <>{t.confirmBooking} <span>↗</span></>}</button>
                         <button className="booking-cancel-button" type="button" onClick={() => setSelected(null)} disabled={busy}>{t.cancelSelection}</button>
                     </div>
-                </motion.section>
+                </section>
             )}
 
-            <div className="booking-bottom-note"><span className="booking-bottom-shield">✓</span><span><strong>{t.confidence}</strong> {t.assurance}</span><span className="booking-bottom-hours">{t.openDaily} · {t.hoursLine}</span></div>
 
             {phoneModal && (
-                <div className="booking-phone-modal-backdrop">
-                    <section className="booking-phone-modal" role="dialog" aria-modal="true" aria-labelledby="booking-phone-title" aria-describedby="booking-phone-description" dir={isArabic ? 'rtl' : 'ltr'}>
-                        <div className="booking-phone-modal-mark" aria-hidden="true"><span>☎</span></div>
-                        <span className="booking-phone-modal-kicker">{t.confirmStep}</span>
+                <MemberDialog label={t.phoneModalTitle} onClose={closePhoneModal} busy={phoneSaving}>
+                    <section className="booking-phone-modal" aria-labelledby="booking-phone-title" aria-describedby="booking-phone-description" dir={isArabic ? 'rtl' : 'ltr'}>
                         <h2 id="booking-phone-title">{t.phoneModalTitle}</h2>
                         <p id="booking-phone-description" className="booking-phone-modal-copy">{t.phoneModalText}</p>
                         <form className="booking-phone-form" noValidate onSubmit={savePhoneAndConfirm}>
@@ -482,7 +444,7 @@ export default function Book() {
                             </div>
                         </form>
                     </section>
-                </div>
+                </MemberDialog>
             )}
         </div>
     )

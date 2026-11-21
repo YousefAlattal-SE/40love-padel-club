@@ -1,0 +1,108 @@
+.member-club .club-rates,
+.member-club .club-rates-notice,
+.member-club .club-legal {
+  color: var(--club-ink);
+  font-family: var(--club-sans);
+}
+
+.member-club .club-rates table {
+  width: 100%;
+  margin: 0;
+  border-collapse: collapse;
+  border-block: 1px solid var(--club-control);
+  color: inherit;
+  background: transparent;
+}
+
+.club-rates :is(th, td) {
+  padding: .95rem .55rem;
+  border: 0;
+  background: transparent;
+  text-align: end;
+  vertical-align: middle;
+  font-variant-numeric: tabular-nums;
+}
+.club-rates tr > :first-child { padding-inline-start: 0; text-align: start; }
+.club-rates tr > :last-child { padding-inline-end: 0; }
+.club-rates thead th {
+  color: var(--club-muted);
+  font: 600 .82rem/1.5 var(--club-sans);
+}
+.club-rates tbody tr { border-block-start: 1px solid var(--club-line); }
+.club-rates tbody th { font: 600 1.05rem/1.45 var(--club-sans); }
+.club-rates tbody th small { display: block; margin-block-start: .15rem; font-weight: 400; }
+.club-rates td { font-size: clamp(1.25rem, 3vw, 1.9rem); font-weight: 500; line-height: 1.2; }
+.club-rates small {
+  color: var(--club-muted);
+  font: 500 .83rem/1.5 var(--club-sans);
+}
+.club-rates > p,
+.club-rates-notice p { margin-block: .9rem 0; color: var(--club-muted); font: 400 .9rem/1.55 var(--club-sans); }
+.club-rates .club-rate-skeleton {
+  display: inline-block;
+  width: clamp(2.4rem, 6vw, 4.5rem);
+  height: 1.15rem;
+  background: var(--club-soft);
+  border: 1px solid var(--club-line);
+}
+.club-rates .club-rates-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.club-rates-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: .6rem 1.5rem;
+  padding-block: 1.2rem;
+  border-block: 1px solid var(--club-line);
+}
+.club-rates-notice p { margin: 0; }
+.member-club :is(.club-rates-notice button, .club-legal-contact) {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 0 .2rem;
+  border: 0;
+  border-radius: 0;
+  color: var(--club-ink);
+  background: transparent;
+  font: 600 .94rem/1.5 var(--club-sans);
+  text-decoration: underline;
+  text-underline-offset: .28em;
+  cursor: pointer;
+}
+.member-club :is(.club-rates-notice button, .club-legal-contact):focus-visible {
+  outline: 2px solid var(--club-focus);
+  outline-offset: 4px;
+}
+
+.member-club .club-legal {
+  width: min(48rem, calc(100% - 2 * var(--club-gutter)));
+  margin-inline: auto;
+  padding-block: clamp(2.7rem, 8vw, 7rem);
+}
+.club-legal > header { padding-block-end: clamp(1.8rem, 5vw, 3.2rem); }
+.club-legal .club-legal-status { margin: 0; color: var(--club-accent); font-weight: 650; }
+.club-legal h1 {
+  margin-block: .6rem 1.3rem;
+  color: var(--club-ink);
+  font: italic 400 clamp(2.65rem, 6vw, 4.6rem)/1.1 var(--club-serif);
+}
+:root[lang='ar'] .club-legal h1 { font-style: normal; font-weight: 500; line-height: 1.4; }
+.club-legal section { padding-block: 1.65rem; border-block-start: 1px solid var(--club-line); }
+.club-legal h2 { margin: 0 0 .4rem; color: var(--club-ink); font: 600 1.18rem/1.45 var(--club-sans); }
+.club-legal p { max-width: 66ch; margin: 0; color: var(--club-muted); font: 400 1.02rem/1.75 var(--club-sans); }
+.club-legal .club-legal-contact { margin-block-start: .45rem; }
+
+@media (max-width: 36rem) {
+  .club-rates :is(th, td) { padding-inline: .35rem; }
+  .club-rates td small { display: block; }
+  .club-rates tbody th small { max-width: 16ch; }
+}

@@ -1,0 +1,97 @@
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 750;
+  font-display: swap;
+  src: url(/club-fonts/dmsans.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Baskervville';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url(/club-fonts/baskervville.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Club Cairo';
+  font-style: normal;
+  font-weight: 400 750;
+  font-display: swap;
+  src: url(/club-fonts/cairo.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Naskh Arabic';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(/club-fonts/notonaskharabic.woff2) format('woff2');
+}
+
+/* Shared club colors and local typefaces. Layouts opt in independently. */
+:is(.member-club, .club-operations) {
+  --club-paper: #f6f4ea;
+  --club-deep: #123d38;
+  --club-felt: #c1d48d;
+  --club-scheme: light;
+  --club-bg: var(--club-paper);
+  --club-surface: #fcfaf2;
+  --club-soft: #eae8dc;
+  --club-ink: #172e29;
+  --club-muted: #4f6259;
+  --club-line: #c6cbbd;
+  --club-control: #728075;
+  --club-accent: #1b514a;
+  --club-on-accent: #faf8ed;
+  --club-focus: #096a77;
+  --club-error: #923f32;
+  --club-success: #285a39;
+  --club-input: var(--club-surface);
+  --club-hero: var(--club-deep);
+  --club-hero-text: #faf8ec;
+  --club-hero-muted: #d1dfcf;
+  --club-sans: 'DM Sans', 'Segoe UI', sans-serif;
+  --club-serif: 'Baskervville', Georgia, serif;
+  --club-width: 1440px;
+  --club-gutter: clamp(20px, 5vw, 80px);
+  --club-section: clamp(56px, 6vw, 98px);
+  --club-radius: 3px;
+}
+
+:root[data-theme='dark'] :is(.member-club, .club-operations) {
+  --club-scheme: dark;
+  --club-bg: #142522;
+  --club-surface: #192f2b;
+  --club-soft: #213a34;
+  --club-ink: #f3f2e4;
+  --club-muted: #bccac0;
+  --club-line: #455b52;
+  --club-control: #80978c;
+  --club-accent: #c1d48d;
+  --club-on-accent: #152e27;
+  --club-focus: #d8e69e;
+  --club-error: #f1aa95;
+  --club-success: #b4d7a8;
+  --club-hero: #102f2c;
+}
+
+:root[lang='ar'] :is(.member-club, .club-operations) {
+  --club-sans: 'Club Cairo', 'DM Sans', Tahoma, sans-serif;
+  --club-serif: 'Noto Naskh Arabic', Tahoma, serif;
+}
+
+.member-club :where(.club-home, .club-legal, .club-mast, .club-menu) {
+  color-scheme: var(--club-scheme);
+  font-family: var(--club-sans);
+}
+
+.club-home :is(a, button, summary, input, textarea):focus-visible {
+  outline: 3px solid var(--club-focus);
+  outline-offset: 3px;
+}
+
+.club-home :is(.club-hero, .club-match) :is(a, button):focus-visible {
+  outline-color: var(--club-felt);
+}

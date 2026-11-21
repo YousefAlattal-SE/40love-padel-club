@@ -49,60 +49,16 @@ export function clerkAppearance(theme, variant = 'default') {
     },
   }
 
-  if (variant === 'admin') {
-    appearance.variables.colorPrimary = dark ? '#B8D65A' : '#A5C94F'
-    appearance.variables.colorBackground = dark ? '#0A5964' : '#FFFFFF'
-    appearance.variables.colorInputTextSecondary = dark ? '#C5D5D1' : '#65777A'
-    appearance.elements.card.backgroundColor = dark ? '#0A5964' : '#FFFFFF'
-    appearance.elements.formFieldLabel = {
-      color: dark ? '#E5EFEC' : '#17343A',
-      fontSize: '13px',
-      fontWeight: '650',
-    }
-    appearance.elements.formFieldInput = {
-      ...appearance.elements.formFieldInput,
-      minHeight: '54px',
-      padding: '13px 15px',
-      borderRadius: '12px',
-      fontSize: '15px',
-      borderColor: dark ? 'rgba(255,255,255,.24)' : '#C7D5D2',
-    }
-    appearance.elements.formButtonPrimary = {
-      ...appearance.elements.formButtonPrimary,
-      minHeight: '54px',
-      borderRadius: '12px',
-      fontSize: '14px',
-      fontWeight: '750',
-      color: '#17343A',
-    }
-    appearance.elements.socialButtonsBlockButton = {
-      ...appearance.elements.socialButtonsBlockButton,
-      minHeight: '52px',
-      borderRadius: '12px',
-      fontSize: '14px',
-      width: '100%',
-      boxSizing: 'border-box',
-      position: 'relative',
-      justifyContent: 'center',
-      borderColor: dark ? 'rgba(255,255,255,.24)' : '#C7D5D2',
-    }
-    appearance.elements.formFieldAction = {
-      ...appearance.elements.formFieldAction,
-      fontSize: '13px',
-    }
-    appearance.elements.footerAction = { display: 'none' }
-    appearance.elements.footerActionText = { display: 'none' }
-    appearance.elements.footerActionLink = { display: 'none' }
-  }
-
-  if (variant === 'member') {
-    const memberSurface = dark ? '#162A25' : '#FFFFFF'
-    const memberInput = dark ? '#203A33' : '#FBFCF8'
+  if (variant === 'member' || variant === 'admin') {
+    appearance.variables.fontFamily = 'var(--club-sans)'
+    appearance.variables.borderRadius = '3px'
+    const memberSurface = dark ? '#142522' : '#fcfaf2'
+    const memberInput = dark ? '#192f2b' : '#FBFCF8'
     const memberInk = dark ? '#F1F4EB' : '#172B24'
     const memberMuted = dark ? '#B5C2B7' : '#5E7066'
-    const memberLine = dark ? 'rgba(234,243,231,.16)' : 'rgba(23,54,42,.18)'
+    const memberLine = dark ? '#80978c' : '#728075'
 
-    appearance.variables.colorPrimary = dark ? '#B4D65B' : '#A7CA4B'
+    appearance.variables.colorPrimary = '#c1d48d'
     appearance.variables.colorBackground = memberSurface
     appearance.variables.colorText = memberInk
     appearance.variables.colorTextSecondary = memberMuted
@@ -132,6 +88,12 @@ export function clerkAppearance(theme, variant = 'default') {
     appearance.elements.dividerText = { color: memberMuted }
     appearance.elements.footerActionText = { color: memberMuted }
     appearance.elements.footerActionLink = { color: dark ? '#D2E882' : '#14645F' }
+  }
+
+  if (variant === 'admin') {
+    appearance.elements.footerAction = { display: 'none' }
+    appearance.elements.formFieldInput.minHeight = '46px'
+    appearance.elements.formButtonPrimary.minHeight = '46px'
   }
 
   return appearance

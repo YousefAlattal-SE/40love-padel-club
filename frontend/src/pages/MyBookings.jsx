@@ -1,3 +1,4 @@
+import { MemberLoading } from './MemberStates'
 import { useCallback, useEffect, useState } from 'react'
 import api, { errorMessage } from '../api'
 import './my-bookings.css'
@@ -99,14 +100,14 @@ function formatStart(iso, locale) {
         minute: '2-digit',
         hourCycle: 'h23',
     }).format(date)
-    return `${dateText}، ${timeText}`
+    return `${dateText}${locale === 'ar' ? '،' : ','} ${timeText}`
 }
 
 function formatMoney(value, locale) {
     const amount = Number(value || 0).toLocaleString(locale === 'ar' ? 'ar-JO' : 'en-JO', {
         maximumFractionDigits: 2,
     })
-    return `${amount} JOD`
+    return `${amount} ${locale === 'ar' ? 'د.أ.' : 'JOD'}`
 }
 
 function formatCourtName(name, locale, copy) {
@@ -272,7 +273,7 @@ export default function MyBookings() {
     if (loading && bookings === null) {
         return (
             <section className="my-bookings-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
-                <div className="mb-loading"><span className="mb-spinner" /><span>{copy.loading}</span></div>
+                <MemberLoading label={copy.loading} />
             </section>
         )
     }
@@ -297,8 +298,8 @@ export default function MyBookings() {
         <section className="my-bookings-page" dir={isArabic ? 'rtl' : 'ltr'} lang={locale}>
             <header className="mb-page-hero">
                 <div className="mb-hero-copy">
-                    <span className="mb-page-tag"><span className="mb-page-tag-dot" />{copy.tag}</span>
-                    <h1>{copy.title}<br /><span>{copy.titleAccent}</span></h1>
+
+                    <h1>{isArabic ? 'حجوزاتي.' : 'My bookings.'}</h1>
                     <p>{copy.intro}</p>
                 </div>
                 <aside className="mb-hero-summary" aria-label={copy.upcomingCount}>
@@ -313,7 +314,7 @@ export default function MyBookings() {
             <section className="mb-bookings-section" aria-labelledby="mb-upcoming-title">
                 <div className="mb-section-heading">
                     <div>
-                        <span className="mb-section-kicker">01 / {isArabic ? 'القادم' : 'NEXT UP'}</span>
+
                         <h2 id="mb-upcoming-title">{copy.upcoming}</h2>
                         <p>{copy.upcomingHint}</p>
                     </div>
@@ -331,7 +332,7 @@ export default function MyBookings() {
             <section className="mb-bookings-section mb-history-section" aria-labelledby="mb-history-title">
                 <div className="mb-section-heading">
                     <div>
-                        <span className="mb-section-kicker">02 / {isArabic ? 'السجل' : 'ARCHIVE'}</span>
+
                         <h2 id="mb-history-title">{copy.history}</h2>
                         <p>{copy.historyHint}</p>
                     </div>

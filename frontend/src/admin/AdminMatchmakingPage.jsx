@@ -1,5 +1,8 @@
+import Icon from './AdminIcon'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import api, { errorMessage } from '../api'
+import { clubCourtName } from '../format'
+import { AdminDialog, Badge, Notice, PageHeading, StatePanel } from './AdminUI'
 import { useAdminLocale } from './AdminLocale'
 
 // ─── Locale helpers ──────────────────────────────────────────────────────────
@@ -60,7 +63,7 @@ function statusLabel(status, ar = false) { return tr(status, ar) }
 function courtLabel(name, ar = false) {
   if (!name) return '—'
   if (/^archived court$/i.test(name)) return ar ? 'ملعب مؤرشف' : 'Archived court'
-  return ar ? name.replace(/Padel/i, 'بادل') : name
+  return clubCourtName(name, ar ? 'ar' : 'en')
 }
 function fmtDate(iso, ar = false) {
   if (!iso) return '—'
@@ -74,7 +77,10 @@ function fmtTime(iso, ar = false) {
   if (!iso) return '—'
   return new Intl.DateTimeFormat(ar ? 'ar-JO-u-nu-latn' : 'en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Amman', hour12: false }).format(new Date(iso))
 }
-function fmtMoney(n) { return `${Number(n || 0).toFixed(3)} JOD` }
+function fmtMoney(n, ar) {
+  const amount = Number(n || 0).toLocaleString(ar ? 'ar-JO' : 'en-GB', { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+  return `${amount} ${ar ? 'د.أ.' : 'JOD'}`
+}
 function PhoneContact({ phone }) {
   if (!phone) return null
   const sanitized = String(phone).replace(/[^+\d]/g, '')
@@ -83,59 +89,31 @@ function PhoneContact({ phone }) {
 }
 
 // ─── Icons ───────────────────────────────────────────────────────────────────
-function Icon({ name, size = 18 }) {
-  const shapes = {
-    plus: <><path d="M12 5v14M5 12h14"/></>,
-    edit: <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z"/></>,
-    publish: <path d="M12 19V5M5 12l7-7 7 7"/>,
-    cancel: <><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></>,
-    users: <><path d="M16 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></>,
-    calendar: <><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></>,
-    refresh: <><path d="M20 11a8 8 0 0 0-14.8-3L3 11"/><path d="M3 5v6h6M4 13a8 8 0 0 0 14.8 3L21 13"/><path d="M21 19v-6h-6"/></>,
-    close: <path d="m6 6 12 12M18 6 6 18"/>,
-    check: <path d="m5 12 4 4L19 6"/>,
-    money: <><circle cx="12" cy="12" r="9"/><path d="M16 8.5c-.7-.8-1.7-1.2-3-1.2-1.5 0-2.6.8-2.6 2s1.1 1.8 2.8 2.2c1.8.4 2.8 1 2.8 2.3s-1.3 2.3-3.1 2.3c-1.4 0-2.7-.5-3.5-1.5M12.9 5.5v13"/></>,
-    list: <><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></>,
-    trophy: <><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22M18 2H6v7a6 6 0 0 0 12 0V2Z"/></>,
-  }
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name] || shapes.calendar}</svg>
-}
-
-function PageHeading({ eyebrow, title, description, action }) {
-  return <div className="admin-page-heading"><div><div className="admin-eyebrow">{eyebrow}</div><h1>{title}</h1>{description && <p>{description}</p>}</div>{action && <div className="admin-heading-action">{action}</div>}</div>
-}
-function Notice({ type = 'info', children, onClose }) {
-  const ar = useAdminLocale() === 'ar'
-  if (!children) return null
-  return <div className={`admin-notice ${type}`} role="status"><span>{children}</span>{onClose && <button onClick={onClose} aria-label={ar ? 'إغلاق التنبيه' : 'Dismiss'}><Icon name="close" size={15} /></button>}</div>
-}
-function Badge({ children, tone = 'neutral' }) {
-  return <span className={`admin-badge ${tone}`}>{children}</span>
-}
-function StatePanel({ loading, error, retry, empty, children, ar = false }) {
-  if (loading) return <div className="admin-state-panel"><span className="admin-spinner" /><strong>{tr('loading', ar)}</strong></div>
-  if (error)   return <div className="admin-state-panel"><strong>{tr('unable', ar)}</strong><p>{error}</p><button className="admin-button secondary" onClick={retry}>{tr('retry', ar)}</button></div>
-  if (empty)   return <div className="admin-state-panel"><span className="admin-empty-icon"><Icon name="trophy" size={24} /></span><strong>{empty}</strong></div>
-  return children
-}
-
 function matchStatusTone(status) {
   return status === 'published' ? 'success' : status === 'cancelled' ? 'danger' : status === 'completed' ? 'neutral' : 'warning'
 }
 
 // ─── Match Form Modal ─────────────────────────────────────────────────────────
 
+const clubInputClock = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Asia/Amman', year: 'numeric', month: '2-digit', day: '2-digit',
+  hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
+
+function toClubInput(date) {
+  const parts = Object.fromEntries(clubInputClock.formatToParts(date).map(({ type, value }) => [type, value]))
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`
+}
+
 function MatchFormModal({ editMatch, courts, onSave, onClose }) {
   const ar = useAdminLocale() === 'ar'
   const now = new Date()
   const defaultStart = new Date(now.getTime() + 24*60*60*1000)
-  const pad = n => String(n).padStart(2, '0')
-  const toLocal = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 
   const [form, setForm] = useState({
     courtId: editMatch?.courtId || (courts[0]?.id || ''),
-    startsAt: editMatch ? toLocal(new Date(editMatch.startsAt)) : toLocal(defaultStart),
-    endsAt: editMatch ? toLocal(new Date(editMatch.endsAt)) : toLocal(new Date(defaultStart.getTime() + 2*60*60*1000)),
+    startsAt: editMatch ? toClubInput(new Date(editMatch.startsAt)) : toClubInput(defaultStart),
+    endsAt: editMatch ? toClubInput(new Date(editMatch.endsAt)) : toClubInput(new Date(defaultStart.getTime() + 2*60*60*1000)),
     maxPlayers: editMatch?.maxPlayers ?? 4,
     pricePerPlayer: editMatch?.pricePerPlayer ?? '35.000',
     skillLevel: editMatch?.skillLevel ?? 'open',
@@ -152,7 +130,9 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
     setFormError('')
     // Basic validation
     if (!form.courtId) { setFormError(tr('selectCourtError', ar)); return }
-    const s = new Date(form.startsAt), en = new Date(form.endsAt)
+    const startsAt = form.startsAt + ':00+03:00'
+    const endsAt = form.endsAt + ':00+03:00'
+    const s = new Date(startsAt), en = new Date(endsAt)
     if (isNaN(s.getTime()) || isNaN(en.getTime())) { setFormError(tr('invalidDate', ar)); return }
     if (en <= s) { setFormError(tr('endAfterStart', ar)); return }
     if (s <= new Date()) { setFormError(tr('futureStart', ar)); return }
@@ -173,18 +153,14 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
     }
     if (Number(form.pricePerPlayer) < 0) { setFormError(tr('negativePrice', ar)); return }
 
+    if (editMatch && editMatch.status !== 'cancelled' && form.status === 'cancelled' && !window.confirm(tr('cancelConfirm', ar))) return
     setSaving(true)
-    // Convert local datetime to offset (Amman = +03:00)
-    function toAmman(localStr) {
-      // localStr is "YYYY-MM-DDTHH:mm" local input
-      return localStr + ':00+03:00'
-    }
     const court = courts.find(c => c.id === Number(form.courtId))
     const payload = {
       sport: court ? court.sport : 'padel', // Fallback just in case
       courtId: Number(form.courtId),
-      startsAt: toAmman(form.startsAt),
-      endsAt: toAmman(form.endsAt),
+      startsAt,
+      endsAt,
       maxPlayers: Number(form.maxPlayers),
       pricePerPlayer: Number(form.pricePerPlayer),
       skillLevel: form.skillLevel,
@@ -204,18 +180,14 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
   }
 
   return (
-    <div className="admin-modal-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="admin-modal-card" role="dialog" aria-modal="true" aria-labelledby="admin-match-modal-title">
+    <AdminDialog className="admin-modal-card" label={editMatch ? tr('editMatch', ar) : tr('createMatch', ar)} onClose={onClose} busy={saving}>
         <div className="admin-modal-header">
           <div>
-            <div className="admin-modal-eyebrow">
-              {editMatch ? tr('editMatch', ar) : tr('createMatch', ar)}
-            </div>
             <h2 id="admin-match-modal-title">
               {editMatch ? tr('updateDetails', ar) : tr('newMatch', ar)}
             </h2>
           </div>
-          <button type="button" className="admin-modal-close" onClick={onClose} aria-label={tr('cancel', ar)}>
+          <button type="button" className="admin-modal-close" disabled={saving} onClick={onClose} aria-label={tr('cancel', ar)}>
             <Icon name="close" size={15} />
           </button>
         </div>
@@ -230,11 +202,11 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
 
           <div className="admin-modal-grid">
             <label className="admin-modal-field">
-              {tr('startDate', ar)} *
+              {tr('startDate', ar)} ({ar ? 'توقيت عمّان' : 'Amman time'}) *
               <input className="admin-modal-control" type="datetime-local" value={form.startsAt} onChange={e => set('startsAt', e.target.value)} required />
             </label>
             <label className="admin-modal-field">
-              {tr('endDate', ar)} *
+              {tr('endDate', ar)} ({ar ? 'توقيت عمّان' : 'Amman time'}) *
               <input className="admin-modal-control" type="datetime-local" value={form.endsAt} onChange={e => set('endsAt', e.target.value)} required />
             </label>
           </div>
@@ -282,7 +254,7 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
           {formError && <div className="admin-form-error" role="alert">{formError}</div>}
 
           <div className="admin-modal-actions">
-            <button type="button" className="admin-button secondary" onClick={onClose}>
+            <button type="button" className="admin-button secondary" disabled={saving} onClick={onClose}>
               {tr('cancel', ar)}
             </button>
             <button type="submit" disabled={saving} className="admin-button primary">
@@ -290,8 +262,7 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </AdminDialog>
   )
 }
 
@@ -299,6 +270,7 @@ function MatchFormModal({ editMatch, courts, onSave, onClose }) {
 
 function MatchDetailPanel({ matchId, onClose, onRefresh }) {
   const ar = useAdminLocale() === 'ar'
+  const [detailError, setDetailError] = useState('')
   const [match, setMatch]   = useState(null)
   const [reservations, setReservations] = useState([])
   const [waitlist, setWaitlist] = useState([])
@@ -317,10 +289,10 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
       api.get(`/admin/matchmaking/${matchId}/totals`),
     ])
       .then(([m, r, w, t]) => {
-        setMatch(m.data); setReservations(r.data); setWaitlist(w.data); setTotals(t.data)
+        setDetailError(''); setMatch(m.data); setReservations(r.data); setWaitlist(w.data); setTotals(t.data)
         setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(err => { setDetailError(errorMessage(err)); setLoading(false) })
   }, [matchId])
 
   // Intentional: load data when the selected match changes.
@@ -339,8 +311,7 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
   }
 
   return (
-    <div className="admin-match-detail-backdrop" onClick={e => e.target === e.currentTarget && onClose()}>
-      <aside className="admin-match-detail-drawer" role="dialog" aria-modal="true" aria-labelledby="admin-match-detail-title">
+    <AdminDialog className="admin-match-detail-drawer" label={tr('details', ar)} onClose={onClose}>
         <div className="admin-match-detail-header">
           <h2 id="admin-match-detail-title">{tr('details', ar)}</h2>
           <button type="button" className="admin-modal-close" onClick={onClose} aria-label={tr('cancel', ar)}>
@@ -348,9 +319,9 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
           </button>
         </div>
 
-        {loading && <div className="admin-state-panel"><span className="admin-spinner" /></div>}
+        <StatePanel loading={loading} error={detailError} retry={load} />
 
-        {!loading && match && (
+        {!loading && !detailError && match && (
           <>
             <div className="admin-match-detail-content">
               {notice && <Notice type={notice.type} onClose={() => setNotice(null)}>{notice.text}</Notice>}
@@ -389,14 +360,14 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
               )}
 
               {/* Tabs */}
-              <div className="admin-match-detail-tabs" role="tablist">
+              <div className="admin-match-detail-tabs" role="group" aria-label={tr('details', ar)}>
                 {[['participants', `${tr('participants', ar)} (${reservations.length})`], ['waitlist', `${tr('waitlist', ar)} (${waitlist.filter(w => w.status === 'waiting' || w.status === 'offered').length})`]].map(([key, label]) => (
-                  <button key={key} type="button" role="tab" aria-selected={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{label}</button>
+                  <button key={key} type="button" aria-pressed={tab === key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}>{label}</button>
                 ))}
               </div>
 
               {tab === 'participants' && (
-                <div className="admin-match-detail-table-scroll">
+                <div className="admin-match-detail-table-scroll" tabIndex={0} role="region" aria-label={tr(tab, ar)}>
                   <table className="admin-match-detail-table">
                     <thead>
                       <tr>
@@ -432,7 +403,7 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
               )}
 
               {tab === 'waitlist' && (
-                <div className="admin-match-detail-table-scroll">
+                <div className="admin-match-detail-table-scroll" tabIndex={0} role="region" aria-label={tr(tab, ar)}>
                   <table className="admin-match-detail-table">
                     <thead>
                       <tr>
@@ -459,8 +430,7 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
             </div>
           </>
         )}
-      </aside>
-    </div>
+    </AdminDialog>
   )
 }
 
@@ -534,7 +504,6 @@ export function AdminMatchmakingPage() {
   return (
     <div className="admin-matchmaking-page" dir={ar ? 'rtl' : 'ltr'} lang={ar ? 'ar' : 'en'}>
       <PageHeading
-        eyebrow={ar ? 'لوحة الإدارة / 04' : 'ADMIN WORKSPACE / 04'}
         title={ar ? 'إدارة المباريات' : 'Matchmaking'}
         description={ar ? 'أنشئ وأدر المباريات المنظمة للأعضاء.' : 'Create and manage organised matches for members.'}
         action={
@@ -553,12 +522,12 @@ export function AdminMatchmakingPage() {
 
         <div className="admin-filter-row" data-lenis-prevent>
           {statusFilters.map(f => (
-            <button key={f.key} className={statusFilter === f.key ? 'active' : ''} onClick={() => setStatusFilter(f.key)}>{f.label}</button>
+            <button key={f.key} aria-pressed={statusFilter === f.key} className={statusFilter === f.key ? 'active' : ''} onClick={() => setStatusFilter(f.key)}>{f.label}</button>
           ))}
         </div>
 
         <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? tr('noMatches', ar) : null} ar={ar}>
-          <div className="admin-table-scroll" data-lenis-prevent>
+          <div className="admin-table-scroll" tabIndex={0} role="region" aria-label={tr('match', ar)} data-lenis-prevent>
             <table className="admin-table admin-match-table">
               <thead>
                 <tr>
@@ -569,24 +538,24 @@ export function AdminMatchmakingPage() {
               </thead>
               <tbody>
                 {filtered.map(match => (
-                  <tr key={match.id} className="admin-match-row">
-                    <td onClick={() => setDetailId(match.id)}>
+                  <tr key={match.id} className="admin-match-row" onClick={event => { if (!event.target.closest('button, a, input, select')) setDetailId(match.id) }}>
+                    <td>
                       <strong>{sportLabel(match.sport, ar)}</strong>
                       <small>{skillLabel(match.skillLevel, ar)}</small>
                     </td>
-                    <td onClick={() => setDetailId(match.id)}><strong>{courtLabel(match.courtName, ar)}</strong></td>
-                    <td onClick={() => setDetailId(match.id)}>
+                    <td><button type="button" className="admin-detail-link" onClick={() => setDetailId(match.id)}>{courtLabel(match.courtName, ar)}</button></td>
+                    <td>
                       <strong>{fmtDate(match.startsAt, ar)}</strong>
                       <small>{fmtTime(match.startsAt, ar)} – {fmtTime(match.endsAt, ar)}</small>
                     </td>
-                    <td onClick={() => setDetailId(match.id)}>
+                    <td>
                       <strong>{match.confirmedCount} / {match.maxPlayers}</strong>
                       {match.waitlistCount > 0 && <small>{match.waitlistCount} {tr('spotsWaitlist', ar)}</small>}
                     </td>
-                    <td onClick={() => setDetailId(match.id)} className="admin-money-cell">
+                    <td className="admin-money-cell">
                       <strong>{fmtMoney(match.pricePerPlayer, ar)}</strong>
                     </td>
-                    <td onClick={() => setDetailId(match.id)}>
+                    <td>
                       <Badge tone={matchStatusTone(match.status)}>{statusLabel(match.status, ar)}</Badge>
                     </td>
                     <td>

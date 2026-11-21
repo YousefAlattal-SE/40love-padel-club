@@ -21,7 +21,6 @@ bin/
 .idea
 !.idea/
 .idea/*
-!.idea/sqldialects.xml
 *.iws
 *.iml
 *.ipr
