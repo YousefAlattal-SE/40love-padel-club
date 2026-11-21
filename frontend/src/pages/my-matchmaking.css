@@ -1,0 +1,304 @@
+/* My Matchmaking adopts the same 40 Love page shell and card system as My Bookings. */
+.my-matchmaking-page {
+  text-align: start;
+}
+
+.my-matchmaking-page[dir='rtl'] {
+  font-family: 'Cairo', var(--body, 'Inter', sans-serif);
+}
+
+.my-matchmaking-page .mym-offers-section {
+  margin-top: 28px;
+}
+
+.my-matchmaking-page .mb-booking-card {
+  align-items: center;
+}
+
+.my-matchmaking-page .mym-offer-card::before {
+  background: var(--mb-brand, #A5C94F);
+}
+
+.mym-offer-icon,
+.mym-waitlist-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, #A5C94F 35%, var(--mb-line));
+  border-radius: 13px;
+  color: #075E6B;
+  background: #E8F2D4;
+}
+
+.mym-offer-icon span {
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.mym-waitlist-icon {
+  color: #94610b;
+  border-color: color-mix(in srgb, #c18431 25%, var(--mb-line));
+  background: color-mix(in srgb, #c18431 10%, var(--mb-surface));
+  font-size: 21px;
+}
+
+.mym-offer-card .mb-booking-eyebrow,
+.mym-offer-card .mb-booking-details h3 {
+  color: #075E6B;
+}
+
+.mym-countdown {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid color-mix(in srgb, #A5C94F 35%, var(--mb-line));
+  border-radius: 999px;
+  color: #075E6B;
+  background: #E8F2D4;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+}
+
+.mym-offer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.mym-primary-button,
+.mym-secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 37px;
+  padding: 8px 14px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.mym-primary-button {
+  color: #1A2E1A;
+  border-color: #A5C94F;
+  background: #A5C94F;
+}
+
+.mym-primary-button:hover:not(:disabled) {
+  border-color: #8BB43E;
+  background: #8BB43E;
+  transform: translateY(-1px);
+}
+
+.mym-secondary-button {
+  color: var(--mb-muted);
+  border-color: var(--mb-line-strong);
+  background: transparent;
+}
+
+.mym-secondary-button:hover:not(:disabled) {
+  color: var(--mb-ink);
+  border-color: var(--mb-brand, #A5C94F);
+  background: var(--mb-blue-soft, #E8F2D4);
+}
+
+.mym-primary-button:disabled,
+.mym-secondary-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.mym-status-paid {
+  color: #075E6B;
+  border-color: color-mix(in srgb, #A5C94F 35%, var(--mb-line));
+  background: #E8F2D4;
+}
+
+.mym-status-unpaid {
+  color: #94610b;
+  border-color: color-mix(in srgb, #c18431 28%, var(--mb-line));
+  background: color-mix(in srgb, #c18431 9%, var(--mb-surface));
+}
+
+.mym-status-waiting {
+  color: #94610b;
+  border-color: color-mix(in srgb, #c18431 28%, var(--mb-line));
+  background: color-mix(in srgb, #c18431 9%, var(--mb-surface));
+}
+
+.mym-payment-line {
+  align-items: baseline;
+}
+
+.mym-payment-note {
+  max-width: 420px;
+  color: var(--mb-muted);
+  font-size: 10px;
+}
+
+.mym-reservation-past {
+  opacity: .86;
+}
+
+.mym-reservation-past::before {
+  background: var(--mb-line-strong);
+}
+
+.mym-reservation-actions {
+  min-width: 145px;
+}
+
+.mym-notice-success {
+  color: #075E6B;
+  border-color: color-mix(in srgb, #A5C94F 35%, transparent);
+  background: #E8F2D4;
+}
+
+.mym-notice-success button {
+  border-color: color-mix(in srgb, #075E6B 30%, transparent);
+}
+
+.mym-notice-error {
+  color: #c63d36;
+}
+
+.mym-empty-link,
+.mym-page-end-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  color: var(--mb-blue);
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.mym-empty-link:hover,
+.mym-page-end-note a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mym-page-end-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 34px;
+  padding: 16px 18px;
+  border: 1px solid var(--mb-line);
+  border-radius: 14px;
+  color: var(--mb-muted);
+  background: var(--mb-panel);
+  font-size: 12px;
+}
+
+.mym-page-end-note a {
+  margin: 0;
+  margin-inline-start: auto;
+}
+
+.my-matchmaking-page[dir='rtl'] .mym-offer-actions,
+.my-matchmaking-page[dir='rtl'] .mym-reservation-actions {
+  align-items: flex-start;
+}
+
+:root[data-theme='dark'] .mym-offer-icon,
+:root[data-theme='dark'] .mym-waitlist-icon {
+  background: rgba(165, 201, 79, 0.16);
+  color: #A5C94F;
+  border-color: rgba(165, 201, 79, 0.30);
+}
+
+:root[data-theme='dark'] .mym-offer-card .mb-booking-eyebrow,
+:root[data-theme='dark'] .mym-offer-card .mb-booking-details h3 {
+  color: #A5C94F;
+}
+
+:root[data-theme='dark'] .mym-countdown {
+  background: rgba(165, 201, 79, 0.16);
+  color: #A5C94F;
+  border-color: rgba(165, 201, 79, 0.30);
+}
+
+:root[data-theme='dark'] .mym-status-paid {
+  background: rgba(165, 201, 79, 0.16);
+  color: #A5C94F;
+  border-color: rgba(165, 201, 79, 0.30);
+}
+
+:root[data-theme='dark'] .mym-notice-success {
+  background: rgba(165, 201, 79, 0.16);
+  color: #F3F7F1;
+  border-color: rgba(165, 201, 79, 0.30);
+}
+
+@media (max-width: 760px) {
+  .my-matchmaking-page .mb-booking-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .my-matchmaking-page .mb-booking-main {
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .my-matchmaking-page .mb-booking-actions,
+  .my-matchmaking-page .mym-offer-actions {
+    width: 100%;
+    max-width: none;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    padding-inline-start: 50px;
+  }
+
+  .my-matchmaking-page .mym-reservation-actions {
+    min-width: 0;
+  }
+
+  .mym-payment-note {
+    width: 100%;
+  }
+
+  .mym-offer-icon,
+  .mym-waitlist-icon {
+    width: 39px;
+    height: 39px;
+    border-radius: 11px;
+  }
+}
+
+@media (max-width: 520px) {
+  .my-matchmaking-page .mb-booking-actions,
+  .my-matchmaking-page .mym-offer-actions {
+    padding-inline-start: 0;
+  }
+
+  .mym-page-end-note a {
+    margin-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .my-matchmaking-page *,
+  .my-matchmaking-page *::before,
+  .my-matchmaking-page *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

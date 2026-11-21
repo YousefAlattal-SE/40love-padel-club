@@ -1,0 +1,217 @@
+/* Public club sections share the dashboard shell and booking card tokens. */
+.club-detail-page {
+  --club-ink: var(--mb-ink);
+  --club-muted: var(--mb-muted);
+  --club-line: var(--mb-line);
+  --club-line-strong: var(--mb-line-strong);
+  --club-accent: var(--mb-blue);
+  --club-brand: var(--mb-brand);
+  --club-surface: var(--mb-surface);
+  --club-panel: var(--mb-panel);
+  --club-accent-soft: var(--mb-blue-soft);
+  min-width: 0;
+}
+
+.club-back-home {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  margin-bottom: 11px;
+  color: var(--club-muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: color .18s ease;
+}
+
+.club-back-home:hover { color: var(--club-accent); }
+.club-detail-page .mb-hero-copy p { max-width: 690px; }
+.club-hero-action { margin-top: 22px; }
+.club-action-button { min-height: 42px; padding: 0 18px; gap: 9px; text-decoration: none; font-size: 12px; }
+.club-action-button:hover { transform: translateY(-1px); }
+.club-booking-link { display: inline-flex; align-items: center; gap: 8px; }
+
+.club-detail-page .mb-bookings-section { margin-top: 39px; }
+.club-court-list { display: grid; gap: 14px; }
+.club-court-card {
+  display: grid;
+  grid-template-columns: minmax(260px, .82fr) minmax(0, 1.18fr);
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+}
+.club-court-image { min-height: 100%; overflow: hidden; background: var(--club-panel); }
+.club-court-image img { width: 100%; height: 100%; min-height: 390px; object-fit: cover; transition: transform .45s ease; }
+.club-court-card:hover .club-court-image img { transform: scale(1.025); }
+.club-court-content { min-width: 0; padding: 25px 27px; }
+.club-court-content > h3 { margin: 7px 0 9px; color: var(--club-ink); font-family: var(--display, 'Sora', sans-serif); font-size: 26px; font-weight: 800; letter-spacing: -.045em; line-height: 1.1; }
+.club-court-description { margin: 0; color: var(--club-muted); font-size: 13px; line-height: 1.65; }
+.club-feature-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px 14px; margin: 18px 0; }
+.club-feature-list > span { display: flex; align-items: flex-start; gap: 7px; min-width: 0; color: var(--club-muted); font-size: 11px; line-height: 1.45; }
+.club-feature-list svg { flex: 0 0 auto; margin-top: 1px; color: var(--club-accent); }
+.club-court-rates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.club-rate-card { min-width: 0; padding: 13px 14px; border: 1px solid var(--club-line); border-radius: 13px; background: var(--club-panel); }
+.club-rate-card small { display: block; color: var(--club-muted); font-size: 9px; font-weight: 800; letter-spacing: .08em; line-height: 1.5; }
+.club-rate-card strong { display: block; margin-top: 7px; color: var(--club-ink); font-family: var(--display, 'Sora', sans-serif); font-size: 22px; font-weight: 850; letter-spacing: -.045em; line-height: 1.1; }
+.club-rate-card strong em { color: var(--club-accent); font-family: var(--body, 'Inter', sans-serif); font-size: 10px; font-style: normal; font-weight: 750; letter-spacing: 0; }
+.club-rate-card > span { display: block; margin-top: 5px; color: var(--club-muted); font-size: 10px; line-height: 1.4; }
+.club-rate-note { margin: 11px 0 16px; color: var(--club-muted); font-size: 10px; line-height: 1.55; }
+
+.club-included-section { margin-bottom: 0; }
+.club-included-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.club-included-card { min-height: 165px; align-items: flex-start; flex-direction: column; padding: 19px; }
+.club-included-icon,
+.club-contact-icon {
+  display: grid;
+  place-items: center;
+  width: 39px;
+  height: 39px;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--club-brand) 30%, var(--club-line));
+  border-radius: 12px;
+  color: var(--club-accent);
+  background: var(--club-accent-soft);
+}
+.club-included-card h3 { margin: 13px 0 6px; color: var(--club-ink); font-family: var(--display, 'Sora', sans-serif); font-size: 14px; font-weight: 800; letter-spacing: -.025em; }
+.club-included-card p { margin: 0; color: var(--club-muted); font-size: 11px; line-height: 1.6; }
+
+.club-pricing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.club-pricing-card { display: block; min-height: 235px; padding: 24px; }
+.club-pricing-card .mb-booking-eyebrow { letter-spacing: .12em; }
+.club-pricing-card .mb-booking-eyebrow i { width: 4px; height: 4px; }
+.club-pricing-card h3 { margin: 18px 0 21px; color: var(--club-ink); font-family: var(--display, 'Sora', sans-serif); font-size: 20px; font-weight: 800; letter-spacing: -.04em; line-height: 1.2; }
+.club-price-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
+.club-price-row strong { color: var(--club-ink); font-family: var(--display, 'Sora', sans-serif); font-size: clamp(29px, 3.4vw, 43px); font-weight: 850; letter-spacing: -.065em; line-height: 1; }
+.club-price-row strong em { color: var(--club-accent); font-family: var(--body, 'Inter', sans-serif); font-size: 11px; font-style: normal; font-weight: 750; letter-spacing: 0; }
+.club-price-row > span { padding-bottom: 3px; color: var(--club-muted); font-size: 10px; white-space: nowrap; }
+.club-price-bundle { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 19px; padding-top: 14px; border-top: 1px solid var(--club-line); color: var(--club-muted); font-size: 11px; }
+.club-price-bundle strong { color: var(--club-ink); font-size: 13px; font-weight: 800; }
+
+.club-gallery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px; }
+.club-gallery-card {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--club-line);
+  border-radius: 16px;
+  color: var(--club-ink);
+  background: var(--club-surface);
+  text-align: start;
+  cursor: zoom-in;
+}
+.club-gallery-card img { width: 100%; aspect-ratio: 1.48 / 1; object-fit: cover; transition: transform .42s ease; }
+.club-gallery-card:hover img { transform: scale(1.035); }
+.club-gallery-card > span { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 43px; padding: 0 15px; color: var(--club-muted); font-size: 11px; font-weight: 750; }
+.club-gallery-card > span b { color: var(--club-accent); font-size: 15px; }
+.club-gallery-card:focus-visible { outline: 3px solid color-mix(in srgb, var(--club-brand) 42%, transparent); outline-offset: 3px; }
+
+.club-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.club-contact-card { min-width: 0; justify-content: flex-start; padding: 18px; }
+.club-contact-card > div { min-width: 0; display: grid; gap: 5px; }
+.club-contact-card .mb-booking-eyebrow { font-size: 9px; letter-spacing: .1em; }
+.club-contact-card a,
+.club-contact-card p { margin: 0; overflow-wrap: anywhere; color: var(--club-ink); font-size: 12px; font-weight: 750; line-height: 1.55; text-decoration: none; }
+.club-contact-card a:hover { color: var(--club-accent); }
+.club-contact-form-section { margin-top: 48px !important; }
+.club-contact-form-card { display: block; padding: 22px; }
+.club-contact-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.club-contact-form label { display: grid; min-width: 0; gap: 6px; }
+.club-contact-form label.full { grid-column: 1 / -1; }
+.club-contact-form label > span { color: var(--club-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.club-contact-form input,
+.club-contact-form textarea { width: 100%; min-height: 43px; padding: 10px 12px; border: 1px solid var(--club-line-strong); border-radius: 11px; outline: 0; color: var(--club-ink); background: var(--club-panel); font-size: 12px; text-align: start; transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+.club-contact-form textarea { min-height: 115px; resize: vertical; }
+.club-contact-form input::placeholder,
+.club-contact-form textarea::placeholder { color: var(--club-muted); opacity: .8; }
+.club-contact-form input:focus,
+.club-contact-form textarea:focus { border-color: var(--club-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--club-brand) 18%, transparent); }
+.club-contact-form input[type='tel'] { direction: ltr; text-align: left; }
+.club-contact-form .contact-feedback { grid-column: 1 / -1; }
+.club-contact-form .form-actions { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 13px; padding-top: 3px; }
+.club-contact-form .form-actions > span { color: var(--club-muted); font-size: 10px; }
+.club-contact-form .form-actions .btn { min-height: 42px; padding: 0 17px; font-size: 12px; }
+
+.club-footer { margin-top: 64px; padding: 28px 24px 15px; border: 1px solid var(--club-line); border-radius: 16px; color: var(--club-ink); background: var(--club-panel); }
+.club-footer-grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(130px, .6fr) minmax(170px, .75fr); gap: clamp(22px, 4vw, 58px); padding: 5px 4px 24px; }
+.club-footer-brand > a { display: inline-block; }
+.club-footer-brand img { width: 44px; height: 44px; object-fit: cover; border-radius: 10px; }
+.club-footer-logo-light { display: block; }
+.club-footer-logo-dark { display: none !important; }
+:root[data-theme='dark'] .club-footer-logo-light { display: none !important; }
+:root[data-theme='dark'] .club-footer-logo-dark { display: block !important; }
+.club-footer-brand > p { max-width: 350px; margin: 13px 0 15px; color: var(--club-muted); font-size: 11px; line-height: 1.65; }
+.club-footer-contact { display: grid; gap: 8px; }
+.club-footer-contact > * { display: flex; align-items: flex-start; gap: 8px; color: var(--club-muted); font-size: 10px; line-height: 1.55; text-decoration: none; }
+.club-footer-contact svg { flex: 0 0 auto; color: var(--club-accent); }
+.club-footer-links { display: flex; flex-direction: column; align-items: flex-start; gap: 9px; }
+.club-footer-links > span { margin: 2px 0 4px; color: var(--club-ink); font-size: 9px; font-weight: 850; letter-spacing: .15em; }
+.club-footer-links > a,
+.club-footer-links > p { margin: 0; color: var(--club-muted); font-size: 10px; line-height: 1.55; text-decoration: none; }
+.club-footer-links > a:hover { color: var(--club-accent); }
+.club-footer-book { margin-top: 1px !important; color: var(--club-accent) !important; font-weight: 800; }
+.club-footer-socials { display: flex; gap: 7px; margin-top: 4px; }
+.club-footer-socials a { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--club-line); border-radius: 9px; color: var(--club-muted); background: var(--club-surface); font-size: 13px; text-decoration: none; transition: color .18s ease, border-color .18s ease, transform .18s ease; }
+.club-footer-socials a:hover { transform: translateY(-1px); color: var(--club-accent); border-color: var(--club-brand); }
+.club-footer-bottom { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 4px 0; border-top: 1px solid var(--club-line); color: var(--club-muted); font-size: 9px; line-height: 1.5; }
+.club-footer-bottom a { color: inherit; text-decoration: none; }
+.club-footer-bottom a:hover { color: var(--club-accent); }
+
+.club-lightbox { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; background: rgba(0, 0, 0, .86); }
+.club-lightbox img { max-width: min(1200px, 92vw); max-height: 86vh; object-fit: contain; border-radius: 14px; box-shadow: 0 25px 70px rgba(0, 0, 0, .35); }
+.club-lightbox-close { position: absolute; top: 18px; inset-inline-end: 18px; display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(255, 255, 255, .35); border-radius: 50%; color: #fff; background: rgba(255, 255, 255, .1); font-size: 26px; line-height: 1; }
+.club-lightbox-close:hover { background: rgba(255, 255, 255, .2); }
+
+@media (max-width: 900px) {
+  .club-court-card { grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr); }
+  .club-court-image img { min-height: 420px; }
+  .club-court-content { padding: 20px; }
+  .club-included-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .club-footer-grid { grid-template-columns: minmax(0, 1fr) minmax(130px, .7fr); }
+  .club-footer-visit { grid-column: 1 / -1; }
+}
+
+@media (max-width: 700px) {
+  .club-detail-page .mb-page-hero { grid-template-columns: 1fr; }
+  .club-detail-page .mb-hero-summary { min-height: 105px; }
+  .club-detail-page .mb-bookings-section { margin-top: 30px; }
+  .club-court-card { grid-template-columns: 1fr; }
+  .club-court-image img { min-height: 0; aspect-ratio: 1.55 / 1; }
+  .club-court-content { padding: 17px; }
+  .club-pricing-grid { grid-template-columns: 1fr; }
+  .club-footer { margin-top: 46px; padding: 22px 17px 13px; }
+  .club-footer-grid { grid-template-columns: 1fr 1fr; gap: 28px 18px; }
+  .club-footer-brand { grid-column: 1 / -1; }
+  .club-footer-visit { grid-column: auto; }
+}
+
+@media (max-width: 520px) {
+  .club-feature-list,
+  .club-court-rates,
+  .club-included-grid,
+  .club-contact-grid { grid-template-columns: 1fr; }
+  .club-included-card { min-height: 0; }
+  .club-pricing-card { min-height: 0; padding: 19px; }
+  .club-price-row { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .club-contact-form-card { padding: 15px; }
+  .club-contact-form { grid-template-columns: 1fr; gap: 11px; }
+  .club-contact-form label.full,
+  .club-contact-form .contact-feedback,
+  .club-contact-form .form-actions { grid-column: auto; }
+  .club-contact-form .form-actions { align-items: flex-start; flex-direction: column; }
+  .club-footer-grid { grid-template-columns: 1fr; }
+  .club-footer-brand,
+  .club-footer-visit { grid-column: auto; }
+  .club-footer-bottom { align-items: flex-start; flex-direction: column; }
+  .club-lightbox { padding: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .club-detail-page *,
+  .club-detail-page *::before,
+  .club-detail-page *::after,
+  .club-footer *,
+  .club-footer *::before,
+  .club-footer *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+}

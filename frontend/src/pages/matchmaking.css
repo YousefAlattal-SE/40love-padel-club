@@ -1,0 +1,555 @@
+/* Matchmaking page styles — follows 40 Love green/teal design */
+
+.mm-page {
+  min-height: 100vh;
+  background: var(--bg, #F5F8F2);
+  color: var(--ink, #1A2E1A);
+  font-family: 'Inter', 'Cairo', system-ui, sans-serif;
+}
+
+/* ─── Hero ─────────────────────────────────────────────────────────────────── */
+.mm-hero {
+  background: linear-gradient(135deg, #054852 0%, #075E6B 55%, #0A6E7C 100%);
+  color: white;
+  padding: clamp(40px, 6vw, 80px) clamp(20px, 5vw, 60px);
+  position: relative;
+  overflow: hidden;
+}
+.mm-hero::after {
+  content: '';
+  position: absolute;
+  width: 480px;
+  height: 480px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.12);
+  right: -120px;
+  bottom: -200px;
+  box-shadow: 0 0 0 40px rgba(255,255,255,.025);
+  pointer-events: none;
+}
+.mm-hero-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+.mm-hero-eyebrow {
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: #E8F2D4;
+  margin-bottom: 14px;
+}
+.mm-hero h1 {
+  font-size: clamp(32px, 5vw, 56px);
+  font-weight: 900;
+  letter-spacing: -.06em;
+  line-height: 1.05;
+  margin: 0 0 16px;
+}
+.mm-hero p {
+  max-width: 560px;
+  color: #E8F2D4;
+  font-size: 14px;
+  line-height: 1.75;
+  margin: 0;
+}
+
+/* ─── Content shell ─────────────────────────────────────────────────────────── */
+.mm-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px clamp(16px, 3vw, 40px) 60px;
+}
+
+/* ─── Filters ───────────────────────────────────────────────────────────────── */
+.mm-filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 28px;
+  padding: 16px 20px;
+  background: white;
+  border: 1px solid #D4DFD0;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(7,50,60,.05);
+}
+.mm-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  color: #5D6B5A;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+.mm-filters select {
+  min-height: 38px;
+  border: 1px solid #D4DFD0;
+  border-radius: 10px;
+  background: #F5F8F2;
+  color: #1A2E1A;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 130px;
+}
+.mm-filters select:focus { outline: none; border-color: #A5C94F; }
+.mm-filter-reset {
+  margin-top: auto;
+  border: 1px solid #D4DFD0;
+  border-radius: 10px;
+  background: white;
+  color: #5D6B5A;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 0 14px;
+  min-height: 38px;
+  cursor: pointer;
+  transition: border-color .2s, color .2s;
+}
+.mm-filter-reset:hover { border-color: #A5C94F; color: #075E6B; }
+
+/* ─── Match grid ────────────────────────────────────────────────────────────── */
+.mm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+/* ─── Match card ────────────────────────────────────────────────────────────── */
+.mm-card {
+  background: white;
+  border: 1px solid #D4DFD0;
+  border-radius: 18px;
+  box-shadow: 0 4px 24px rgba(7,50,60,.06);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow .2s, transform .2s;
+}
+.mm-card:hover { box-shadow: 0 8px 40px rgba(7,50,60,.11); transform: translateY(-2px); }
+
+.mm-card-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid #EDF2E8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mm-sport-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #E8F2D4;
+  color: #1A2E1A;
+  border: 1px solid rgba(165,201,79,.35);
+}
+
+.mm-status-badge {
+  font-size: 8px;
+  font-weight: 900;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #e9f8f1;
+  color: #137b51;
+  border: 1px solid #d3f1e3;
+}
+.mm-status-badge.full    { background: #fff6e6; color: #94610b; border-color: #f2e2bc; }
+.mm-status-badge.cancelled { background: #fff0f0; color: #bf3e43; border-color: #f8d7d7; }
+
+.mm-card-body { padding: 16px 20px; flex: 1; }
+.mm-card-title {
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -.03em;
+  margin: 0 0 14px;
+  color: #1A2E1A;
+  line-height: 1.2;
+}
+.mm-card-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mm-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.mm-meta-label {
+  font-size: 8px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #5D6B5A;
+}
+.mm-meta-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1A2E1A;
+}
+
+/* Capacity bar */
+.mm-capacity {
+  margin-bottom: 14px;
+}
+.mm-capacity-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+  color: #5D6B5A;
+  margin-bottom: 6px;
+}
+.mm-capacity-label strong { color: #1A2E1A; }
+.mm-capacity-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: #D4DFD0;
+  overflow: hidden;
+}
+.mm-capacity-fill {
+  height: 100%;
+  background: #A5C94F;
+  border-radius: 999px;
+  transition: width .4s ease;
+}
+.mm-capacity-fill.full { background: #d97706; }
+
+.mm-skill-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 1px solid #D4DFD0;
+  color: #5D6B5A;
+  background: #F5F8F2;
+  margin-bottom: 4px;
+}
+
+.mm-card-footer {
+  padding: 14px 20px 18px;
+  border-top: 1px solid #EDF2E8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.mm-price {
+  display: flex;
+  flex-direction: column;
+}
+.mm-price-value {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  color: #075E6B;
+}
+.mm-price-label {
+  font-size: 9px;
+  color: #5D6B5A;
+  font-weight: 700;
+}
+.mm-join-btn {
+  min-height: 40px;
+  padding: 0 18px;
+  background: #A5C94F;
+  color: #1A2E1A;
+  border: none;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+  white-space: nowrap;
+}
+.mm-join-btn:hover:not(:disabled) { background: #8BB43E; transform: translateY(-1px); }
+.mm-join-btn:disabled { opacity: .6; cursor: not-allowed; }
+.mm-join-btn.waitlist {
+  background: white;
+  color: #075E6B;
+  border: 1px solid #075E6B;
+}
+.mm-join-btn.waitlist:hover:not(:disabled) { background: #E8F2D4; }
+
+/* ─── State panels ──────────────────────────────────────────────────── */
+.mm-state {
+  min-height: 240px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  color: #5D6B5A;
+  grid-column: 1 / -1;
+}
+.mm-state-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: #E8F2D4;
+  color: #075E6B;
+}
+.mm-state strong { font-size: 14px; color: #1A2E1A; }
+.mm-state p { font-size: 12px; margin: 0; }
+
+/* ─── Modal / confirmation ──────────────────────────────────────────────────── */
+.mm-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,24,28,.52);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.mm-modal {
+  background: white;
+  border-radius: 22px;
+  width: min(520px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 80px rgba(0,0,0,.25);
+  animation: mm-slide-up .25s ease;
+}
+@keyframes mm-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.mm-modal-header {
+  padding: 24px 24px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.mm-modal-header h2 {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+  margin: 0;
+  color: #1A2E1A;
+}
+.mm-modal-close {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #D4DFD0;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+  color: #5D6B5A;
+  flex: 0 0 auto;
+}
+.mm-modal-close:hover { border-color: #A5C94F; color: #075E6B; }
+.mm-modal-body { padding: 20px 24px 24px; }
+
+.mm-confirm-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #EDF2E8;
+  font-size: 12px;
+}
+.mm-confirm-row:last-child { border-bottom: 0; }
+.mm-confirm-row span:first-child { color: #5D6B5A; font-weight: 600; }
+.mm-confirm-row span:last-child  { font-weight: 750; color: #1A2E1A; }
+
+.mm-payment-notice {
+  margin: 18px 0 0;
+  padding: 14px 16px;
+  background: #E8F2D4;
+  border: 1px solid rgba(7,94,107,.2);
+  border-radius: 13px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #1A2E1A;
+}
+.mm-payment-notice strong { color: #075E6B; display: block; margin-bottom: 3px; }
+
+.mm-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+.mm-modal-actions button { flex: 1; min-height: 44px; border-radius: 12px; font-size: 12px; font-weight: 850; cursor: pointer; border: 1px solid transparent; transition: background .2s; }
+.mm-modal-actions .primary { background: #A5C94F; color: #1A2E1A; }
+.mm-modal-actions .primary:hover:not(:disabled) { background: #8BB43E; }
+.mm-modal-actions .secondary { background: white; color: #1A2E1A; border-color: #D4DFD0; }
+.mm-modal-actions .secondary:hover { border-color: #A5C94F; color: #075E6B; }
+.mm-modal-actions button:disabled { opacity: .6; cursor: not-allowed; }
+
+.mm-success-check {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #e9f8f1;
+  color: #137b51;
+  margin: 0 auto 16px;
+}
+
+/* ─── My reservations page ──────────────────────────────────────────────────── */
+.mm-my-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 36px clamp(16px, 3vw, 40px) 60px;
+}
+.mm-my-page h1 {
+  font-size: clamp(26px, 4vw, 38px);
+  font-weight: 900;
+  letter-spacing: -.055em;
+  margin: 0 0 8px;
+  color: #1A2E1A;
+}
+.mm-my-page > p { color: #5D6B5A; font-size: 13px; margin: 0 0 28px; }
+
+.mm-reservation-card {
+  background: white;
+  border: 1px solid #D4DFD0;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 12px rgba(7,50,60,.05);
+}
+.mm-reservation-card.cancelled { opacity: .7; }
+.mm-res-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.mm-res-header h3 { font-size: 15px; font-weight: 850; margin: 0; color: #1A2E1A; letter-spacing: -.03em; }
+.mm-res-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.mm-res-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.mm-res-item label { font-size: 8px; font-weight: 900; text-transform: uppercase; letter-spacing: .1em; color: #5D6B5A; display: block; margin-bottom: 3px; }
+.mm-res-item span  { font-size: 11px; font-weight: 700; color: #1A2E1A; }
+.mm-res-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #EDF2E8;
+}
+.mm-cancel-btn {
+  border: 1px solid #bf3e43;
+  background: white;
+  color: #bf3e43;
+  border-radius: 10px;
+  padding: 0 14px;
+  min-height: 34px;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background .2s;
+}
+.mm-cancel-btn:hover:not(:disabled) { background: #fff0f0; }
+.mm-cancel-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ─── Waitlist status card ──────────────────────────────────────────────────── */
+.mm-waitlist-card {
+  background: #fff6e6;
+  border: 1px solid #f2e2bc;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.mm-waitlist-card.offered { background: #e9f8f1; border-color: #d3f1e3; }
+.mm-waitlist-card-content { flex: 1; }
+.mm-waitlist-card h4 { margin: 0 0 4px; font-size: 13px; font-weight: 850; color: #1A2E1A; }
+.mm-waitlist-card p  { margin: 0; font-size: 11px; color: #5D6B5A; }
+.mm-offer-countdown { font-size: 13px; font-weight: 900; color: #137b51; }
+.mm-offer-actions { display: flex; gap: 8px; margin-top: 12px; }
+.mm-offer-actions button { min-height: 34px; padding: 0 14px; border-radius: 10px; font-size: 10px; font-weight: 850; cursor: pointer; border: 1px solid transparent; }
+.mm-offer-actions .accept { background: #A5C94F; color: #1A2E1A; }
+.mm-offer-actions .accept:hover { background: #8BB43E; }
+.mm-offer-actions .decline { background: white; color: #bf3e43; border-color: #bf3e43; }
+.mm-offer-actions .decline:hover { background: #fff0f0; }
+
+/* ─── Dark theme support ────────────────────────────────────────────────────── */
+:root[data-theme='dark'] .mm-page { background: #075E6B; color: #F3F7F1; }
+:root[data-theme='dark'] .mm-hero { background: linear-gradient(135deg, #054852 0%, #075E6B 55%, #0A6E7C 100%); }
+:root[data-theme='dark'] .mm-filters { background: #0A6E7C; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-filters select { background: #0D7E8D; color: #F3F7F1; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-filter-reset { background: #0A6E7C; color: #A5B8A2; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-card { background: #0A6E7C; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-card-header { border-bottom-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-card-title { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-meta-label { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-meta-value { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-capacity-label { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-capacity-label strong { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-card-footer { border-top-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-price-value { color: #A5C94F; }
+:root[data-theme='dark'] .mm-price-label { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-join-btn.waitlist { background: transparent; color: #A5C94F; border-color: #A5C94F; }
+:root[data-theme='dark'] .mm-join-btn.waitlist:hover:not(:disabled) { background: rgba(165,201,79,0.15); }
+:root[data-theme='dark'] .mm-modal { background: #0A6E7C; }
+:root[data-theme='dark'] .mm-modal-header h2 { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-modal-close { background: #0D7E8D; border-color: rgba(255,255,255,0.12); color: #A5B8A2; }
+:root[data-theme='dark'] .mm-confirm-row { border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-confirm-row span:first-child { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-confirm-row span:last-child { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-payment-notice { background: #0D7E8D; border-color: rgba(255,255,255,0.18); color: #F3F7F1; }
+:root[data-theme='dark'] .mm-payment-notice strong { color: #A5C94F; }
+:root[data-theme='dark'] .mm-modal-actions .secondary { background: #0D7E8D; color: #F3F7F1; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-reservation-card { background: #0A6E7C; border-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-res-header h3 { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-res-item label { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-res-item span { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-res-footer { border-top-color: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-waitlist-card { background: #45351b; border-color: #675027; }
+:root[data-theme='dark'] .mm-waitlist-card.offered { background: #123b31; border-color: #205344; }
+:root[data-theme='dark'] .mm-waitlist-card h4 { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-waitlist-card p { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-capacity-bar { background: rgba(255,255,255,0.12); }
+:root[data-theme='dark'] .mm-skill-tag { background: #0D7E8D; border-color: rgba(255,255,255,0.12); color: #A5B8A2; }
+:root[data-theme='dark'] .mm-sport-badge { background: rgba(165,201,79,0.16); color: #A5C94F; border-color: rgba(165,201,79,0.30); }
+:root[data-theme='dark'] .mm-state-icon { background: #0D7E8D; color: #A5C94F; }
+:root[data-theme='dark'] .mm-state strong { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-state p { color: #A5B8A2; }
+:root[data-theme='dark'] .mm-my-page h1 { color: #F3F7F1; }
+:root[data-theme='dark'] .mm-my-page > p { color: #A5B8A2; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .mm-hero { padding: 32px 20px; }
+  .mm-hero h1 { font-size: 30px; }
+  .mm-grid { grid-template-columns: 1fr; }
+  .mm-card-meta { grid-template-columns: 1fr 1fr; }
+  .mm-res-grid { grid-template-columns: 1fr 1fr; }
+  .mm-filters { gap: 8px; }
+  .mm-filters label { font-size: 8px; }
+  .mm-filters select { min-width: 100px; font-size: 11px; }
+}
