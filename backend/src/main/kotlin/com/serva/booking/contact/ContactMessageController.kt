@@ -1,9 +1,12 @@
 package com.serva.booking.contact
 
+import com.serva.booking.auth.ContactPhone
 import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -14,7 +17,7 @@ import org.springframework.web.server.ResponseStatusException
 
 data class CreateContactMessageRequest(
     val name: String,
-    val phone: String,
+    val phone: String? = null,
     val sport: String,
     val preferredTime: String? = null,
     val message: String,
@@ -52,13 +55,12 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
     @PostMapping("/contact-messages")
     fun create(@RequestBody request: CreateContactMessageRequest): ContactMessageResponse {
         val name = request.name.trim()
-        val phone = request.phone.trim()
         val sport = request.sport.trim().lowercase()
         val preferredTime = request.preferredTime?.trim()?.takeIf { it.isNotEmpty() }
         val message = request.message.trim()
 
         if (name.length !in 2..120) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Name must be between 2 and 120 characters")
-        if (phone.length !in 6..40) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Enter a valid phone number")
+        val phone = ContactPhone.normalizeRequired(request.phone)
         if (sport != "padel") throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Only Padel is supported")
         if (preferredTime != null && preferredTime.length > 120) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Preferred time is too long")
         if (message.length !in 5..3000) throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Message must be between 5 and 3000 characters")
@@ -72,6 +74,9 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
             mapper, name, phone, sport, preferredTime, message,
         )
     }
+
+    @ExceptionHandler(ResponseStatusException::class)
+    fun requestError(error: ResponseStatusException) = ResponseEntity.status(error.statusCode).body(error.body)
 
     // SecurityConfig requires ROLE_ADMIN for /api/admin/**.
     @GetMapping("/admin/contact-messages")

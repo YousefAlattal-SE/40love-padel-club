@@ -60,3 +60,20 @@ allOpen {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+
+val frontendDir = layout.projectDirectory.dir("../frontend")
+val frontendOutput = layout.buildDirectory.dir("generated/vite")
+val buildFrontend by tasks.registering(Exec::class) {
+	workingDir(frontendDir)
+	val npm = if (System.getProperty("os.name").startsWith("Windows")) "npm.cmd" else "npm"
+	commandLine(npm, "run", "build", "--", "--outDir", frontendOutput.get().asFile.absolutePath, "--emptyOutDir")
+	outputs.dir(frontendOutput)
+	// Vite also reads mode-specific .env files and build-time process variables.
+	outputs.upToDateWhen { false }
+}
+
+// The old checked-in static snapshot is never an input to the runtime classpath.
+sourceSets.main { resources.exclude("static/**") }
+tasks.processResources {
+	from(buildFrontend) { into("static") }
+}

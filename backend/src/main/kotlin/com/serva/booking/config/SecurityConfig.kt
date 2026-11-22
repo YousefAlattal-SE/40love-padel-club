@@ -106,7 +106,7 @@ class SecurityConfig(
                     .requestMatchers(
                         org.springframework.http.HttpMethod.GET,
                         "/api/matches",
-                        "/api/matches/{id}"
+                        "/api/matches/{id:[0-9]+}"
                     ).permitAll()
 
                     // Public courts list.
