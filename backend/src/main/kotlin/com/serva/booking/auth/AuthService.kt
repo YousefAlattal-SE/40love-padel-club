@@ -10,23 +10,6 @@ class AuthService(
     private val jwt: JwtService,
 ) {
 
-    fun register(req: RegisterRequest): AuthResponse {
-        val email = req.email.trim().lowercase()
-        if (users.existsByEmail(email)) throw EmailAlreadyUsedException()
-
-        // Everyone who registers through the API is a member. Admins are promoted manually in the database.
-        val user = users.save(
-            User(
-                email = email,
-                passwordHash = requireNotNull(encoder.encode(req.password)),
-                fullName = req.fullName.trim(),
-                phone = ContactPhone.normalizeOptional(req.phone),
-                role = Role.member,
-            )
-        )
-        return AuthResponse(jwt.generate(user), user.toResponse())
-    }
-
     fun login(req: LoginRequest): AuthResponse {
         val user = users.findByEmail(req.email.trim().lowercase())
 

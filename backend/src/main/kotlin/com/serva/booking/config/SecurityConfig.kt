@@ -83,7 +83,6 @@ class SecurityConfig(
             .authorizeHttpRequests {
                 it
                     .requestMatchers(
-                        "/api/auth/register",
                         "/api/auth/login"
                     ).permitAll()
 

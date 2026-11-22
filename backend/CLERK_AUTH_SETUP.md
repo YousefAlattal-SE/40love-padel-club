@@ -53,3 +53,28 @@ The backend reads its PostgreSQL connection settings from the process environmen
 - `DB_USERNAME` and `DB_PASSWORD` are required. Set them to the credentials for the local or deployed database through the process environment or a secret manager; do not commit or log their values.
 
 The default URL preserves the existing local development endpoint. No database credentials are included in source configuration.
+
+## Enrollment after retiring legacy registration
+
+The member website registers new identities through Clerk. After sign-in it calls
+`POST /api/auth/bootstrap`. For a new subject, the backend obtains the primary
+email and its verification status from Clerk. It creates a member record only
+after verifying ownership. Returning users are identified by their stored Clerk
+subject. A different subject presenting an existing email receives a conflict.
+
+The former `POST /api/auth/register` password enrollment handler has been
+removed. New integrations must use Clerk signup. Existing password-backed
+members and administrators may still use `POST /api/auth/login`; the server
+loads the active account and its privileges from PostgreSQL. A deployment with
+Clerk disabled can continue authenticating existing legacy users but cannot
+enroll new users through the retired route.
+
+This change requires no database migration. Historical email collisions need
+individual review: verify ownership and account history before approving any
+separate migration. Never link users or transfer an administrator role solely
+because email addresses match.
+
+Before rollout, inventory external callers of the retired registration endpoint.
+With staging test identities, exercise Clerk signup and repeat sign-in, an
+existing-email conflict, and legacy member and staff sign-in. Verify one local
+row per Clerk subject and the expected authorization on admin endpoints.
