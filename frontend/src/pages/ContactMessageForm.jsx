@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import api from '../api'
+import { normalizeContactPhone } from '../contactPhone'
 
 export default function ContactMessageForm({ locale = 'en', phone = '', variant = 'home' }) {
   const isArabic = locale === 'ar'
@@ -24,6 +25,10 @@ export default function ContactMessageForm({ locale = 'en', phone = '', variant 
     }
 
     try {
+      if (!normalizeContactPhone(payload.phone)) {
+        setError(isArabic ? 'أدخل رقم هاتف صالحًا يتكوّن من 8 إلى 15 رقمًا.' : 'Enter a valid phone number with 8 to 15 digits.')
+        return
+      }
       await api.post('/contact-messages', payload)
       form.reset()
       setSubmitted(true)

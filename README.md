@@ -103,3 +103,13 @@ npm run dev
 ```
 
 The frontend Vite proxy forwards `/api` requests to `http://localhost:8080`.
+
+### Build the deployable JAR
+
+Use Java 21 and a Node/npm version supported by the locked Vite version. From a clean checkout, run `npm ci` in `frontend` and supply the target environment’s `VITE_CLERK_PUBLISHABLE_KEY` before building. This public value is compiled into the website. Configure backend credentials separately at runtime.
+
+Run `./gradlew bootJar` in `backend` (on Windows, `.\gradlew.bat bootJar`). Gradle runs the frontend production build into a dedicated generated directory and packages its contents under `BOOT-INF/classes/static/` in the executable JAR in `backend/build/libs/`. The historical static snapshot is excluded from Gradle resources. When adding a React route, update `FrontendRoutes.kt` and the deployment regression test so that direct links work.
+
+### Clerk widget localization
+
+The member login, registration and staff login share the Arabic Clerk localization. Clerk renders the “Secured by” attribution and “Development mode” notice directly in its own footer. The currently installed localization schema exposes no keys for either footer string. Both remain visible in Arabic mode. Recheck these two strings when upgrading Clerk. [Clerk branding component](https://github.com/clerk/javascript/blob/main/packages/ui/src/elements/Card/CardClerkAndPagesTag.tsx) · [Development notice](https://github.com/clerk/javascript/blob/main/packages/ui/src/elements/DevModeNotice.tsx)
