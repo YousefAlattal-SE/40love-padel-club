@@ -144,17 +144,6 @@ class MatchWaitlistEntry(
 // ─── Repositories ──────────────────────────────────────────────────────────────
 
 interface MatchRepository : JpaRepository<Match, Long> {
-    @Query("SELECT m FROM Match m WHERE m.sport = 'padel' AND m.legacySport IS NULL AND m.status IN :statuses ORDER BY m.startsAt ASC")
-    fun findByStatusIn(@Param("statuses") statuses: List<MatchStatus>): List<Match>
-
-    // Keep enum values as typed parameters: string/enum literals make Hibernate cast to
-    // the Java enum type name (MatchStatus), which does not match PostgreSQL match_status.
-    @Query("SELECT m FROM Match m WHERE m.sport = 'padel' AND m.legacySport IS NULL AND m.status = :status AND m.startsAt > :from ORDER BY m.startsAt ASC")
-    fun findUpcomingPublished(
-        @Param("status") status: MatchStatus,
-        @Param("from") from: Instant,
-    ): List<Match>
-
     /** Count published matches that overlap the given time range on the given court. */
     @Query("""
         SELECT COUNT(m) FROM Match m
@@ -195,6 +184,7 @@ interface MatchReservationRepository : JpaRepository<MatchReservation, Long> {
 
 interface MatchWaitlistRepository : JpaRepository<MatchWaitlistEntry, Long> {
     fun findByMatchId(matchId: Long): List<MatchWaitlistEntry>
+    fun countByMatchIdAndStatusIn(matchId: Long, statuses: List<WaitlistStatus>): Int
     fun findByUserId(userId: Long): List<MatchWaitlistEntry>
     fun findByMatchIdAndUserId(matchId: Long, userId: Long): MatchWaitlistEntry?
 

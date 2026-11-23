@@ -15,7 +15,7 @@ The backend Clerk verifier accepts Clerk **session tokens** from the configured 
    }
    ```
 
-   Clerk's default session token does not include `aud`; the application rejects the token unless this custom session claim is present and exactly matches `CLERK_API_AUDIENCE`.
+   With `CLERK_API_AUDIENCE` set, tokens must include the configured audience. Development issuers under `.clerk.accounts.dev` may omit both the setting and the claim. For a dedicated custom issuer that cannot emit an audience, explicitly set `CLERK_ALLOW_AUDIENCELESS=true` and leave the audience setting empty. This mode rejects tokens carrying an audience. Issuer, session times, signature and exact authorized party remain mandatory.
 5. `azp` is a default session claim containing the frontend origin. Clerk may omit it when the originating request has no `Origin`; this application rejects a missing value. Browser-originated Clerk requests must retain their origin.
 6. In **Domains**, copy the exact Frontend API URL as `CLERK_ISSUER`. It must be the HTTPS origin only, with no trailing slash or path. The backend derives the JWKS URL by appending `/.well-known/jwks.json`. Clerk's session JWT algorithm is restricted to RS256 by the backend.
 7. Use separate development and production instances/origins. Do not include wildcard origins in `CLERK_AUTHORIZED_PARTIES`.
@@ -33,11 +33,10 @@ CLERK_SECRET_KEY=<backend-only-secret-manager-value>
 JWT_SECRET=<existing-legacy-jwt-secret-during-transition>
 ```
 
-For local development, `JWT_SECRET` may be omitted: the backend creates and reuses a random
+With only `SPRING_PROFILES_ACTIVE=local` explicitly enabled, `JWT_SECRET` may be omitted: the backend creates and reuses a random
 local-only signing key at `%USERPROFILE%\\.fortylove\\local-jwt-secret` on Windows (or
 `~/.fortylove/local-jwt-secret` elsewhere). This keeps legacy JWTs stable across local
-restarts without putting a secret in source control. With the `prod` or `production`
-Spring profile active, the backend refuses to start unless `JWT_SECRET` is explicitly set.
+restarts without putting a secret in source control. Every other profile combination, including the default, requires an explicit strong `JWT_SECRET`. Keep a distinct secret per environment and API. Legacy tokens now require issuer `fortylove-legacy`, audience `fortylove-api`, issuance and expiry. `JWT_LIFETIME_MINUTES` defaults to 30 (range 1–60). Previously issued legacy tokens require a fresh password sign-in; existing accounts and Clerk sessions are preserved. Coordinate the cutover for every backend replica and legacy client.
 
 Set only the Clerk **Publishable Key** in the frontend as `VITE_CLERK_PUBLISHABLE_KEY`. The migration file `V7__clerk_auth.sql` exists in source. Its applied status must be checked in the target database's `flyway_schema_history`; this source tree does not establish whether the database has run it. Spring Boot's configured Flyway startup can apply pending migrations automatically, so do not start the backend against the target database until V7's history is verified and any required migration has approval.
 

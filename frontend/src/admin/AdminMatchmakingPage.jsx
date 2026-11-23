@@ -1,3 +1,4 @@
+import PageControls from '../components/PageControls'
 import Icon from './AdminIcon'
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import api, { errorMessage } from '../api'
@@ -439,6 +440,7 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
 export function AdminMatchmakingPage() {
   const locale = useAdminLocale()
   const ar = locale === 'ar'
+  const [page, setPage] = useState(0)
   const [matches, setMatches] = useState([])
   const [courts, setCourts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -455,14 +457,14 @@ export function AdminMatchmakingPage() {
   useEffect(() => {
     let live = true
     Promise.all([
-      api.get('/admin/matchmaking'),
+      api.get('/admin/matchmaking', { params: { page, status: statusFilter === 'all' ? undefined : statusFilter } }),
       api.get('/courts'),
     ])
       .then(([m, c]) => { if (live) { setMatches(m.data); setCourts(c.data); setError('') } })
       .catch(err => { if (live) setError(errorMessage(err)) })
       .finally(() => { if (live) setLoading(false) })
     return () => { live = false }
-  }, [reload])
+  }, [reload, page, statusFilter])
 
   async function publishMatch(match) {
     if (!window.confirm(`${tr('publishConfirm', ar)}\n${courtLabel(match.courtName, ar)}`)) return
@@ -522,10 +524,11 @@ export function AdminMatchmakingPage() {
 
         <div className="admin-filter-row" data-lenis-prevent>
           {statusFilters.map(f => (
-            <button key={f.key} aria-pressed={statusFilter === f.key} className={statusFilter === f.key ? 'active' : ''} onClick={() => setStatusFilter(f.key)}>{f.label}</button>
+            <button key={f.key} aria-pressed={statusFilter === f.key} className={statusFilter === f.key ? 'active' : ''} onClick={() => { setPage(0); setStatusFilter(f.key) }}>{f.label}</button>
           ))}
         </div>
 
+        <PageControls page={page} count={matches.length} onPage={setPage} ar={ar} loading={loading} />
         <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? tr('noMatches', ar) : null} ar={ar}>
           <div className="admin-table-scroll" tabIndex={0} role="region" aria-label={tr('match', ar)} data-lenis-prevent>
             <table className="admin-table admin-match-table">

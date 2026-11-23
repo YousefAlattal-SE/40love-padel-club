@@ -21,6 +21,7 @@ import java.net.URI
 class ClerkJwtProperties {
     var issuer: String = ""
     var audience: String = ""
+    var allowAudienceless: Boolean = false
     var authorizedParties: List<String> = emptyList()
 }
 
@@ -69,12 +70,13 @@ class ClerkJwtConfiguration {
             "CLERK_AUTHORIZED_PARTIES must contain at least one exact app origin"
         }
 
-        // Audience is optional because the current Clerk session token
-        // does not contain an aud claim.
+        val developmentInstance = URI(issuer).host.endsWith(".clerk.accounts.dev")
+        require(audience.isNotEmpty() || properties.allowAudienceless || developmentInstance) {
+            "Configure the Clerk API audience or explicitly approve audience-less sessions for a dedicated issuer"
+        }
         val audienceValidator = OAuth2TokenValidator<Jwt> { jwt ->
             if (
-                audience.isEmpty() ||
-                audience in jwt.audience.orEmpty()
+                if (audience.isEmpty()) !jwt.hasClaim("aud") else audience in jwt.audience.orEmpty()
             ) {
                 validToken()
             } else {

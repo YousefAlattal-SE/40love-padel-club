@@ -30,6 +30,28 @@ class SecurityConfig(
     @Value($$"${app.clerk.enabled:false}") private val clerkAuthenticationEnabled: Boolean,
 ) {
 
+    @Value($$"${app.api.sensitive-per-minute:20}")
+    private var sensitivePerMinute = 20
+    @Value($$"${app.api.general-per-minute:240}")
+    private var generalPerMinute = 240
+
+    @Value($$"${app.public-origin:}")
+    private var publicOrigin = ""
+
+    private fun apiCors(): org.springframework.web.cors.CorsConfiguration {
+        val config = org.springframework.web.cors.CorsConfiguration()
+        if (publicOrigin.isBlank()) return config
+        val uri = java.net.URI(publicOrigin)
+        require(uri.scheme == "https" && uri.host != null && uri.userInfo == null &&
+            uri.rawPath.isNullOrEmpty() && uri.rawQuery == null && uri.rawFragment == null) {
+            "APP_PUBLIC_ORIGIN must be one exact HTTPS origin without a path"
+        }
+        config.allowedOrigins = listOf(publicOrigin)
+        config.allowedMethods = listOf("GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS")
+        config.allowedHeaders = listOf("Authorization", "Content-Type", "Accept")
+        return config
+    }
+
     private val logger = LoggerFactory.getLogger(SecurityConfig::class.java)
 
     @Bean
@@ -39,6 +61,17 @@ class SecurityConfig(
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
 
         http
+            .addFilterBefore(ApiLimitsFilter(sensitivePerMinute = sensitivePerMinute, generalPerMinute = generalPerMinute), org.springframework.security.web.authentication.logout.LogoutFilter::class.java)
+            .cors { cors ->
+                val source = org.springframework.web.cors.UrlBasedCorsConfigurationSource()
+                // Allow an exact external UI origin when the proxy terminates TLS.
+                source.registerCorsConfiguration("/api/**", apiCors())
+                cors.configurationSource(source)
+            }
+            .headers { headers ->
+                headers.contentSecurityPolicy { it.policyDirectives("object-src 'none'; base-uri 'self'; frame-ancestors 'self'") }
+                headers.referrerPolicy { it.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.SAME_ORIGIN) }
+            }
             .csrf {
                 it.disable()
             }

@@ -45,6 +45,7 @@ class ClerkJwtConfigurationTest {
         val validators = config.tokenValidators(properties)
 
         assertTrue(validators.validate(jwt(audience = emptyList())).hasErrors())
+        assertTrue(validators.validate(jwt(audience = listOf("different-api"))).hasErrors())
         assertTrue(validators.validate(jwt(authorizedParty = null)).hasErrors())
         assertTrue(validators.validate(jwt(authorizedParty = "https://attacker.example")).hasErrors())
     }
@@ -85,6 +86,21 @@ class ClerkJwtConfigurationTest {
         val changedFirstSignatureCharacter = if (signature.first() == 'A') 'B' else 'A'
         val tampered = "${parts[0]}.${parts[1]}.$changedFirstSignatureCharacter${signature.drop(1)}"
         assertThrows(JwtException::class.java) { decoder.decode(tampered) }
+    }
+
+    @Test
+    fun `audienceless sessions require an isolated issuer and absent audience`() {
+        properties.audience = ""
+        val session = Jwt.withTokenValue("test-session").header("alg","RS256").issuer(issuer)
+            .subject("user_fixture").claim("azp", origin).notBefore(Instant.now().minusSeconds(10))
+            .expiresAt(Instant.now().plusSeconds(100)).build()
+        val dev = config.tokenValidators(properties)
+        assertFalse(dev.validate(session).hasErrors())
+        assertTrue(dev.validate(jwt(audience = listOf("different-api"))).hasErrors())
+        properties.issuer = "https://identity.example"
+        assertThrows(IllegalArgumentException::class.java) { config.tokenValidators(properties) }
+        properties.allowAudienceless = true
+        assertTrue(config.tokenValidators(properties).validate(session).hasErrors()) // wrong issuer
     }
 
     private fun jwt(

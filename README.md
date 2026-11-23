@@ -119,8 +119,15 @@ The member login, registration and staff login share the Arabic Clerk localizati
 
 The backend runs Flyway at startup by default. Configure two independent logins for the
 same PostgreSQL 16 database. Use a dedicated cluster or review cluster-wide role names
-and database access with the DBA first. The repository does not provision a Docker
-Compose deployment. The PostgreSQL container bootstrap user is for administration only.
+and database access with the DBA first. The PostgreSQL container bootstrap user is for
+administration only.
+
+For a fresh local database, supply `POSTGRES_PASSWORD` through your local environment
+and run `docker compose -p fortylove-dev -f compose.dev.yaml up -d`. The port binds to
+`127.0.0.1` and defaults to 5433. Set `FORTYLOVE_DB_PORT` to an unused port if needed.
+The new volume runs the role bootstrap on initialization, so continue with step 2 below.
+Existing containers keep their original bindings. Verify their volume, backups, and
+restore procedure before scheduling a separate network cutover.
 
 1. On a **new disposable** database called `fortylove`, connect with an authorized DBA
    and run `psql -X -v ON_ERROR_STOP=1 -d fortylove -f backend/db/bootstrap_roles.sql`.

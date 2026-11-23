@@ -12,14 +12,13 @@ import java.util.Base64
  */
 internal object JwtSecretResolver {
     private const val LOCAL_SECRET_FILE = ".fortylove/local-jwt-secret"
-    private val productionProfiles = setOf("prod", "production")
 
     fun resolve(configuredSecret: String, activeProfiles: String, userHome: Path): String {
         if (configuredSecret.isNotBlank()) return configuredSecret
 
         val profiles = activeProfiles.split(',').map { it.trim().lowercase() }.toSet()
-        check(profiles.intersect(productionProfiles).isEmpty()) {
-            "JWT_SECRET must be configured when the prod or production profile is active"
+        check(profiles == setOf("local")) {
+            "JWT_SECRET is required outside the explicit local profile"
         }
 
         return loadOrCreateLocalSecret(userHome.resolve(LOCAL_SECRET_FILE))

@@ -1,5 +1,6 @@
 package com.serva.booking.matchmaking
 
+import com.serva.booking.config.ApiPage
 import com.serva.booking.BookingRuleException
 import com.serva.booking.booking.SlotTakenException
 import com.serva.booking.booking.BookingRepository
@@ -35,35 +36,45 @@ class MatchService(
     // ─── Public / Member: list and view matches ────────────────────────────────
 
     @Transactional(readOnly = true)
-    fun listPublished(sport: Sport? = null, skillLevel: SkillLevel? = null): List<MatchResponse> {
-        val matches = matchRepo.findUpcomingPublished(MatchStatus.published, Instant.now())
-        return matches
-            .filter { sport == null || it.sport == sport.name }
-            .filter { skillLevel == null || it.skillLevel == skillLevel }
-            .map { toMatchResponse(it) }
-    }
+    fun listMatches(page: ApiPage, status: MatchStatus?, skill: SkillLevel?, upcomingOnly: Boolean): List<MatchResponse> =
+        jdbc.query(
+            """
+            SELECT m.*,
+                (SELECT COUNT(*) FROM match_reservations r WHERE r.match_id=m.id AND r.status='confirmed') AS confirmed,
+                (SELECT COUNT(*) FROM match_waitlist w WHERE w.match_id=m.id AND w.status IN ('waiting','offered')) AS queued
+            FROM (
+                SELECT src.*, c.name AS court_name FROM matches src
+                JOIN courts c ON c.id=src.court_id AND c.legacy_sport IS NULL AND c.sport='padel'
+                WHERE src.sport='padel' AND src.legacy_sport IS NULL
+                  AND (? = '' OR status::text = ?) AND (? = '' OR skill_level::text = ?)
+                  AND (NOT ? OR starts_at > CURRENT_TIMESTAMP)
+                ORDER BY src.starts_at, src.id LIMIT ? OFFSET ?
+            ) m
+            ORDER BY m.starts_at, m.id
+            """.trimIndent(),
+            { rs, _ ->
+                fun time(column: String) = rs.getTimestamp(column).toInstant().atZone(zone).toOffsetDateTime().toString()
+                val confirmed = rs.getInt("confirmed")
+                val capacity = rs.getInt("max_players")
+                MatchResponse(
+                    id = rs.getLong("id"), sport = rs.getString("sport"), courtId = rs.getLong("court_id"),
+                    courtName = rs.getString("court_name"), startsAt = time("starts_at"), endsAt = time("ends_at"),
+                    maxPlayers = capacity, pricePerPlayer = rs.getBigDecimal("price_per_player"),
+                    skillLevel = SkillLevel.valueOf(rs.getString("skill_level")), description = rs.getString("description"),
+                    status = MatchStatus.valueOf(rs.getString("status")), confirmedCount = confirmed,
+                    availableSpots = (capacity - confirmed).coerceAtLeast(0), waitlistCount = rs.getInt("queued"),
+                    createdAt = time("created_at"),
+                )
+            },
+            status?.name.orEmpty(), status?.name.orEmpty(), skill?.name.orEmpty(), skill?.name.orEmpty(),
+            upcomingOnly, page.size, page.offset,
+        )
 
     @Transactional(readOnly = true)
     fun getPublicMatch(matchId: Long): MatchResponse {
         val match = requirePadelMatch(matchId)
         if (match.status != MatchStatus.published) throw MatchNotFoundException()
         return toMatchResponse(match)
-    }
-
-    // ─── Admin: list all matches ───────────────────────────────────────────────
-
-    @Transactional(readOnly = true)
-    fun listAll(
-        sport: Sport? = null,
-        status: MatchStatus? = null,
-        skillLevel: SkillLevel? = null,
-    ): List<MatchResponse> {
-        val statuses = if (status != null) listOf(status) else MatchStatus.entries
-        val matches = matchRepo.findByStatusIn(statuses)
-        return matches
-            .filter { sport == null || it.sport == sport.name }
-            .filter { skillLevel == null || it.skillLevel == skillLevel }
-            .map { toMatchResponse(it) }
     }
 
     // ─── Admin: create a match ─────────────────────────────────────────────────
@@ -716,8 +727,7 @@ class MatchService(
         val court = courtRepo.findById(match.courtId).orElseThrow()
         if (match.sport != Sport.padel.name || match.legacySport != null || court.sport != Sport.padel.name || court.legacySport != null) throw MatchNotFoundException()
         val confirmedCount = reservationRepo.countConfirmedByMatchId(match.id, MatchReservationStatus.confirmed).toInt()
-        val waitlistCount = waitlistRepo.findByMatchIdAndStatus(match.id, WaitlistStatus.waiting).size +
-                waitlistRepo.findByMatchIdAndStatus(match.id, WaitlistStatus.offered).size
+        val waitlistCount = waitlistRepo.countByMatchIdAndStatusIn(match.id, listOf(WaitlistStatus.waiting, WaitlistStatus.offered))
         return MatchResponse(
             id = match.id,
             sport = match.sport,

@@ -2,6 +2,7 @@ package com.serva.booking.matchmaking
 
 import com.serva.booking.auth.AuthUser
 import com.serva.booking.court.Sport
+import com.serva.booking.config.ApiPage
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
@@ -53,10 +54,11 @@ class MatchController(private val matchService: MatchService) {
     fun list(
         @RequestParam(required = false) sport: String?,
         @RequestParam(required = false) skillLevel: String?,
+        page: ApiPage,
     ): List<MatchResponse> {
-        val s = parseSportFilter(sport)
+        parseSportFilter(sport)
         val sk = skillLevel?.trim()?.let { runCatching { SkillLevel.valueOf(it.lowercase()) }.getOrNull() }
-        return matchService.listPublished(s, sk)
+        return matchService.listMatches(page, MatchStatus.published, sk, upcomingOnly = true)
     }
 
     /** Public: single match detail. */
@@ -130,11 +132,12 @@ class AdminMatchController(private val matchService: MatchService) {
         @RequestParam(required = false) sport: String?,
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) skillLevel: String?,
+        page: ApiPage,
     ): List<MatchResponse> {
-        val s = parseSportFilter(sport)
+        parseSportFilter(sport)
         val st = status?.trim()?.let { runCatching { MatchStatus.valueOf(it.lowercase()) }.getOrNull() }
         val sk = skillLevel?.trim()?.let { runCatching { SkillLevel.valueOf(it.lowercase()) }.getOrNull() }
-        return matchService.listAll(s, st, sk)
+        return matchService.listMatches(page, st, sk, upcomingOnly = false)
     }
 
     /** Admin: create a match. */

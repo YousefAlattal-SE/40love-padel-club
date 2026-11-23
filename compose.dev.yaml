@@ -1,0 +1,14 @@
+# New local PostgreSQL installations only. Existing databases require a planned cutover.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: fortylove
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set the local Docker bootstrap password}
+    ports:
+      - "127.0.0.1:${FORTYLOVE_DB_PORT:-5433}:5432"
+    volumes:
+      - dev_pgdata:/var/lib/postgresql/data
+      - ./backend/db/bootstrap_roles.sql:/docker-entrypoint-initdb.d/10-bootstrap.sql:ro
+volumes:
+  dev_pgdata:
