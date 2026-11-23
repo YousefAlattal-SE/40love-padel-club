@@ -37,17 +37,13 @@ class AvailabilityRepository(private val jdbc: JdbcTemplate) {
                 rs.getInt("end_hour"),
             )
         }
-    /** Active (not canceled) bookings AND published matches that overlap the window [from, to). */
+    /** Court claims that overlap the window [from, to). */
     fun bookedRanges(from: Instant, to: Instant): List<BookedRange> =
         jdbc.query(
             """
             SELECT court_id, starts_at, ends_at
-            FROM bookings
-            WHERE status <> 'cancelled' AND starts_at < ? AND ends_at > ?
-            UNION ALL
-            SELECT court_id, starts_at, ends_at
-            FROM matches
-            WHERE sport = 'padel' AND legacy_sport IS NULL AND status = 'published' AND starts_at < ? AND ends_at > ?
+            FROM court_occupancy
+            WHERE tstzrange(starts_at, ends_at, '[)') && tstzrange(?, ?, '[)')
             """.trimIndent(),
             { rs, _ ->
                 BookedRange(
@@ -56,9 +52,7 @@ class AvailabilityRepository(private val jdbc: JdbcTemplate) {
                     rs.getObject("ends_at", OffsetDateTime::class.java).toInstant(),
                 )
             },
-            to.atOffset(ZoneOffset.UTC),
             from.atOffset(ZoneOffset.UTC),
             to.atOffset(ZoneOffset.UTC),
-            from.atOffset(ZoneOffset.UTC),
         )
 }

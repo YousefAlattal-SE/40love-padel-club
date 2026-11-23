@@ -113,3 +113,54 @@ Run `./gradlew bootJar` in `backend` (on Windows, `.\gradlew.bat bootJar`). Grad
 ### Clerk widget localization
 
 The member login, registration and staff login share the Arabic Clerk localization. Clerk renders the “Secured by” attribution and “Development mode” notice directly in its own footer. The currently installed localization schema exposes no keys for either footer string. Both remain visible in Arabic mode. Recheck these two strings when upgrading Clerk. [Clerk branding component](https://github.com/clerk/javascript/blob/main/packages/ui/src/elements/Card/CardClerkAndPagesTag.tsx) · [Development notice](https://github.com/clerk/javascript/blob/main/packages/ui/src/elements/DevModeNotice.tsx)
+
+
+## Database identities for local development and staging
+
+The backend runs Flyway at startup by default. Configure two independent logins for the
+same PostgreSQL 16 database. Use a dedicated cluster or review cluster-wide role names
+and database access with the DBA first. The repository does not provision a Docker
+Compose deployment. The PostgreSQL container bootstrap user is for administration only.
+
+1. On a **new disposable** database called `fortylove`, connect with an authorized DBA
+   and run `psql -X -v ON_ERROR_STOP=1 -d fortylove -f backend/db/bootstrap_roles.sql`.
+   The script creates three roles and installs the extension in one transaction. It
+   intentionally stops if any role name already exists. It restricts database CONNECT
+   and temporary-object privileges previously granted to PUBLIC. Review other clients
+   before considering this change on an existing installation.
+2. Set independent credentials through your secret manager or use interactive psql
+   commands `\password fortylove_app` and `\password fortylove_migrator`. Keep the
+   trigger owner `fortylove_claim_writer` as NOLOGIN with no memberships.
+3. Supply `DB_URL`, `DB_USERNAME=fortylove_app`, and `DB_PASSWORD` for the application
+   pool. For startup migration, also supply `FLYWAY_USERNAME=fortylove_migrator` and
+   `FLYWAY_PASSWORD`. The JDBC URL is shared. Spring validates the runtime session
+   identity on each new connection. Keep the existing Clerk and JWT configuration.
+   From `backend`, use `gradlew.bat bootRun` on Windows.
+4. For staging with separated secrets, prefer a release job running a compatible
+   Flyway version against `backend/src/main/resources/db/migration` as the migrator.
+   Only after it succeeds, start the web service with `SPRING_FLYWAY_ENABLED=false`
+   and the runtime credentials alone. Startup migration otherwise places both secrets
+   in the backend process. Keep either login out of frontend/Vite variables and logs.
+5. For an existing V8 database, inventory ownership, ACLs, role memberships, schema
+   privileges, and Flyway history before rollout. The migrator must control application
+   objects and Flyway history. Rehearse any necessary object-specific ownership changes
+   on a disposable clone first. Preserve IDs and history. Avoid blanket reassignment
+   of a Docker bootstrap or shared database owner's objects. Check for existing booking,
+   published-match and completed-match conflicts, and measure V9's write-lock window.
+   Obtain separate approval before any migration on a persistent database.
+
+**Privilege model.** The runtime can read court occupancy. Its source-table grants
+cover users, bookings, matches, reservations, waiting lists, contact messages, court
+availability and pricing. V9 lists the exact tables, writable columns and sequences.
+It grants no source deletes or Flyway history access. Flyway owns the ledger. The
+NOLOGIN function owner has ledger DML and the court permissions needed for a row lock
+and eligibility check. Its temporary schema creation grant is revoked within V9.
+Only the migrator can switch to the function owner under the supplied bootstrap.
+
+**Verification.** Run `python backend/src/test/postgresql/court_scheduling.py` with Docker
+available. It launches and removes a network-isolated PostgreSQL 16 database. For the
+backend suite, configure a **fresh disposable** PostgreSQL database with the above roles
+and secrets, then run `gradlew.bat test --rerun-tasks` from `backend`. Verify the role
+boundary again after changes to default privileges or database ownership. In staging
+check member booking, staff publication, court closure, early completion and slot
+availability with approved test accounts.

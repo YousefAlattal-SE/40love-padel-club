@@ -1,6 +1,7 @@
 package com.serva.booking.matchmaking
 
 import com.serva.booking.BookingRuleException
+import com.serva.booking.booking.SlotTakenException
 import com.serva.booking.booking.BookingRepository
 import com.serva.booking.booking.BookingStatus
 import com.serva.booking.court.CourtRepository
@@ -108,7 +109,7 @@ class MatchService(
 
     @Transactional
     fun updateMatch(matchId: Long, req: UpdateMatchRequest): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
 
         // Cannot edit a cancelled or completed match
         if (match.status == MatchStatus.cancelled || match.status == MatchStatus.completed) {
@@ -131,6 +132,12 @@ class MatchService(
 
         // Validate new status transitions
         validateStatusTransition(match.status, newStatus)
+
+        if (newStatus == MatchStatus.completed &&
+            (newCourtId != match.courtId || newStart != match.startsAt || newEnd != match.endsAt)
+        ) {
+            throw BookingRuleException("Complete the match without changing its scheduled court or time")
+        }
 
         // If publishing, check for conflicts with bookings and other matches
         if (newStatus == MatchStatus.published) {
@@ -169,7 +176,7 @@ class MatchService(
 
     @Transactional
     fun publishMatch(matchId: Long): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
         if (match.status != MatchStatus.draft) {
             throw BookingRuleException("Only draft matches can be published")
         }
@@ -185,7 +192,7 @@ class MatchService(
 
     @Transactional
     fun cancelMatch(matchId: Long): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
         if (match.status == MatchStatus.cancelled) {
             throw BookingRuleException("Match is already cancelled")
         }
@@ -693,13 +700,13 @@ class MatchService(
         // Check conflicts with regular bookings
         val bookingConflicts = bookingRepo.countOverlapping(courtId, start, end, BookingStatus.cancelled)
         if (bookingConflicts > 0) {
-            throw BookingRuleException("The selected court is already booked during this time slot")
+            throw SlotTakenException()
         }
 
         // Check conflicts with other published matches
         val matchConflicts = matchRepo.countConflictingPublished(courtId, start, end, excludeMatchId, MatchStatus.published)
         if (matchConflicts > 0) {
-            throw BookingRuleException("Another match is already scheduled on this court during this time")
+            throw SlotTakenException()
         }
     }
 

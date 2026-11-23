@@ -156,6 +156,7 @@ class AdminController(private val jdbc: JdbcTemplate) {
     }
 
     @PatchMapping("/bookings/{id}/status")
+    @org.springframework.transaction.annotation.Transactional
     fun updateBookingStatus(
         @PathVariable id: Long,
         @RequestBody request: AdminBookingStatusRequest,

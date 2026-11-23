@@ -10,7 +10,6 @@ import com.serva.booking.availability.AvailabilityService
 import com.serva.booking.court.Court
 import com.serva.booking.court.CourtRepository
 import com.serva.booking.court.Sport
-import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Duration
@@ -66,19 +65,15 @@ class BookingService(
             throw SlotTakenException()
         }
 
-        val saved = try {
-            bookings.saveAndFlush(
-                Booking(
-                    userId = user.id,
-                    courtId = court.id,
-                    startsAt = start,
-                    endsAt = end,
-                    totalPrice = quote.total,
-                )
+        val saved = bookings.saveAndFlush(
+            Booking(
+                userId = user.id,
+                courtId = court.id,
+                startsAt = start,
+                endsAt = end,
+                totalPrice = quote.total,
             )
-        } catch (_: DataIntegrityViolationException) {
-            throw SlotTakenException()
-        }
+        )
         return toResponse(saved, court)
     }
 

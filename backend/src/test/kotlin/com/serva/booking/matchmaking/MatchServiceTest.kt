@@ -138,7 +138,7 @@ class MatchServiceTest {
             null,
         )
 
-        assertThrows(com.serva.booking.BookingRuleException::class.java) {
+        assertThrows(com.serva.booking.booking.SlotTakenException::class.java) {
             matchService.createMatch(1L, req)
         }
     }
@@ -183,10 +183,10 @@ class MatchServiceTest {
     @Test
     fun `court conflict with existing booking blocks publish`() {
         val m = mockMatch(status = MatchStatus.draft)
-        `when`(matchRepository.findById(matchId)).thenReturn(Optional.of(m))
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(m)
         `when`(bookingRepository.countOverlapping(courtId, later, later.plusSeconds(7200), com.serva.booking.booking.BookingStatus.cancelled)).thenReturn(1L)
 
-        assertThrows(com.serva.booking.BookingRuleException::class.java) {
+        assertThrows(com.serva.booking.booking.SlotTakenException::class.java) {
             matchService.publishMatch(matchId)
         }
     }

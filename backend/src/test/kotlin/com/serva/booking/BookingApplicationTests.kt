@@ -12,13 +12,14 @@ class BookingApplicationTests {
 	@Autowired
 	private lateinit var jdbc: JdbcTemplate
 
+	@Autowired
+	private lateinit var flyway: org.flywaydb.core.Flyway
+
 	@Test
 	fun `application connects to the dedicated Padel-only database`() {
 		assertEquals("fortylove", jdbc.queryForObject("SELECT current_database()", String::class.java))
-		assertEquals(1, jdbc.queryForObject(
-			"SELECT COUNT(*) FROM flyway_schema_history WHERE version = '6' AND success = true",
-			Int::class.java,
-		))
+		assertEquals(1, flyway.info().applied().count { it.version?.version == "6" && it.state.isApplied })
+		assertEquals("fortylove_app", jdbc.queryForObject("SELECT current_user", String::class.java))
 		assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM courts WHERE sport <> 'padel'", Int::class.java))
 		assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM matches WHERE sport <> 'padel'", Int::class.java))
 		assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM pricing WHERE sport <> 'padel'", Int::class.java))
