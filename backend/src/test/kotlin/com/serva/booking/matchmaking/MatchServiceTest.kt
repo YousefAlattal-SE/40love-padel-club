@@ -208,6 +208,7 @@ class MatchServiceTest {
     fun `full match allows waitlist join`() {
         val m = mockMatch(status = MatchStatus.published)
         `when`(matchRepository.findById(matchId)).thenReturn(Optional.of(m))
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(m)
         `when`(reservationRepository.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)).thenReturn(4L) // full
         `when`(waitlistRepository.findByMatchIdAndUserId(matchId, userId)).thenReturn(null)
         `when`(waitlistRepository.findFirstWaiting(matchId, WaitlistStatus.waiting)).thenReturn(emptyList())
@@ -220,23 +221,27 @@ class MatchServiceTest {
     @Test
     fun `valid cancellation releases capacity`() {
         val res = MatchReservation(id = 1L, matchId = matchId, userId = userId, status = MatchReservationStatus.confirmed, priceSnapshot = BigDecimal.TEN)
+        `when`(reservationRepository.matchIdForReservation(1L)).thenReturn(matchId)
         `when`(reservationRepository.findById(1L)).thenReturn(Optional.of(res))
         val m = mockMatch(startsAt = Instant.now().plusSeconds(24 * 3600))
         `when`(matchRepository.findById(matchId)).thenReturn(Optional.of(m))
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(m)
 
-        matchService.cancelReservation(userId, 1L)
+        matchService.cancelReservation(userId, 1L, res.lifecycleId)
         assertEquals(MatchReservationStatus.cancelled, res.status)
     }
 
     @Test
     fun `cancellation rejected under 12h`() {
         val res = MatchReservation(id = 1L, matchId = matchId, userId = userId, status = MatchReservationStatus.confirmed, priceSnapshot = BigDecimal.TEN)
+        `when`(reservationRepository.matchIdForReservation(1L)).thenReturn(matchId)
         `when`(reservationRepository.findById(1L)).thenReturn(Optional.of(res))
         val m = mockMatch(startsAt = Instant.now().plusSeconds(10 * 3600)) // < 12h
         `when`(matchRepository.findById(matchId)).thenReturn(Optional.of(m))
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(m)
 
         assertThrows(CancellationTooLateException::class.java) {
-            matchService.cancelReservation(userId, 1L)
+            matchService.cancelReservation(userId, 1L, res.lifecycleId)
         }
     }
 

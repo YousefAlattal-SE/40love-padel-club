@@ -137,6 +137,23 @@ def exercise():
     snapshot = history(MIGRATOR)
     migrate(v9)
     assert snapshot == history(MIGRATOR)
+    # A V9 database may contain an outstanding offer when the application is stopped.
+    migrate("UPDATE match_waitlist SET status='offered' WHERE match_id=901")
+    before = migrate("SELECT to_jsonb(w) FROM match_waitlist w WHERE match_id=901")
+    paid = migrate("SELECT to_jsonb(r) FROM match_reservations r WHERE match_id=901")
+    migrate("BEGIN;\n" + next(MIGRATIONS.glob("V10__*.sql")).read_text(encoding="utf-8") + "\nCOMMIT;")
+    assert sql("SELECT offer_id IS NOT NULL FROM match_waitlist WHERE match_id=901") == "t"
+    assert sql("SELECT to_jsonb(w)-'offer_id' FROM match_waitlist w WHERE match_id=901") == before
+    assert sql("SELECT to_jsonb(r) FROM match_reservations r WHERE match_id=901") == paid
+    sql("UPDATE match_waitlist SET offer_id=NULL WHERE match_id=901", "23514")
+    print("PASS V10 backfills existing offer and preserves queue and payment records")
+    queue_before = sql("SELECT to_jsonb(w) FROM match_waitlist w WHERE match_id=901")
+    migrate("BEGIN;\n" + next(MIGRATIONS.glob("V11__*.sql")).read_text(encoding="utf-8") + "\nCOMMIT;")
+    assert sql("SELECT to_jsonb(w)-'lifecycle_id' FROM match_waitlist w WHERE match_id=901") == queue_before
+    assert sql("SELECT to_jsonb(r)-'lifecycle_id' FROM match_reservations r WHERE match_id=901") == paid
+    for table in ("match_waitlist", "match_reservations"):
+        assert sql(f"SELECT lifecycle_id IS NOT NULL FROM {table} WHERE match_id=901") == "t"
+    print("PASS V11 assigns identities and preserves existing offer and paid participation")
     permissions()
     assert sql("SELECT count(*) FROM court_occupancy WHERE match_id=901") == "1"
     sql(booking(middle, later), "court_occupancy_no_overlap")

@@ -108,6 +108,9 @@ class MatchReservation(
 
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "lifecycle_id", nullable = false)
+    var lifecycleId: java.util.UUID = java.util.UUID.randomUUID(),
+
 )
 
 // ─── Waitlist entry entity ─────────────────────────────────────────────────────
@@ -131,6 +134,9 @@ class MatchWaitlistEntry(
     @Column(name = "offered_at")
     var offeredAt: Instant? = null,
 
+    @Column(name = "offer_id")
+    var offerId: java.util.UUID? = null,
+
     @Column(name = "offer_expires_at")
     var offerExpiresAt: Instant? = null,
 
@@ -139,6 +145,9 @@ class MatchWaitlistEntry(
 
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "lifecycle_id", nullable = false)
+    var lifecycleId: java.util.UUID = java.util.UUID.randomUUID(),
+
 )
 
 // ─── Repositories ──────────────────────────────────────────────────────────────
@@ -170,6 +179,9 @@ interface MatchRepository : JpaRepository<Match, Long> {
 }
 
 interface MatchReservationRepository : JpaRepository<MatchReservation, Long> {
+    @Query("select r.matchId from MatchReservation r where r.id = :id")
+    fun matchIdForReservation(@Param("id") id: Long): Long?
+
     fun findByUserId(userId: Long): List<MatchReservation>
     fun findByMatchIdAndUserId(matchId: Long, userId: Long): MatchReservation?
 
@@ -191,7 +203,7 @@ interface MatchWaitlistRepository : JpaRepository<MatchWaitlistEntry, Long> {
     @Query("""
         SELECT w FROM MatchWaitlistEntry w
         WHERE w.matchId = :matchId AND w.status = :status
-        ORDER BY w.joinedAt ASC
+        ORDER BY w.joinedAt ASC, w.id ASC
     """)
     fun findFirstWaiting(
         @Param("matchId") matchId: Long,
@@ -199,14 +211,14 @@ interface MatchWaitlistRepository : JpaRepository<MatchWaitlistEntry, Long> {
     ): List<MatchWaitlistEntry>
 
     @Query("""
-        SELECT w FROM MatchWaitlistEntry w
-        WHERE w.status = :status AND w.offerExpiresAt < :now
+        SELECT DISTINCT w.matchId FROM MatchWaitlistEntry w
+        WHERE w.status = :status AND (w.offerExpiresAt IS NULL OR w.offerExpiresAt <= :now)
           AND EXISTS (SELECT m.id FROM Match m WHERE m.id = w.matchId AND m.sport = 'padel' AND m.legacySport IS NULL)
     """)
-    fun findExpiredOffers(
+    fun expiredMatchIds(
         @Param("now") now: Instant,
         @Param("status") status: WaitlistStatus,
-    ): List<MatchWaitlistEntry>
+    ): List<Long>
 
     fun findByMatchIdAndStatus(matchId: Long, status: WaitlistStatus): List<MatchWaitlistEntry>
 }

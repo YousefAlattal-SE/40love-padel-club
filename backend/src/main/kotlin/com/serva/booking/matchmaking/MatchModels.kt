@@ -72,6 +72,7 @@ data class MatchResponse(
 )
 
 data class MatchReservationResponse(
+    val lifecycleId: java.util.UUID,
     val id: Long,
     val matchId: Long,
     val sport: String,
@@ -88,6 +89,7 @@ data class MatchReservationResponse(
 
 /** Admin view of a reservation — includes user details. */
 data class AdminReservationResponse(
+    val lifecycleId: java.util.UUID,
     val id: Long,
     val matchId: Long,
     val userId: Long,
@@ -101,7 +103,11 @@ data class AdminReservationResponse(
     val createdAt: String,
 )
 
+data class OfferActionRequest(val offerId: java.util.UUID)
+
 data class WaitlistEntryResponse(
+    val lifecycleId: java.util.UUID,
+    val offerId: java.util.UUID?,
     val id: Long,
     val matchId: Long,
     val status: WaitlistStatus,
@@ -132,7 +138,9 @@ data class MatchTotalsResponse(
 )
 
 /** Admin update payment status */
-data class AdminMarkPaidRequest(val paid: Boolean)
+data class LifecycleActionRequest(val lifecycleId: java.util.UUID)
+
+data class AdminMarkPaidRequest(val paid: Boolean, val lifecycleId: java.util.UUID)
 
 /** Member class exceptions */
 class MatchNotFoundException : RuntimeException("Match not found")

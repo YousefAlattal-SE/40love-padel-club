@@ -82,8 +82,9 @@ class MatchController(private val matchService: MatchService) {
     @PostMapping("/reservations/{id}/cancel")
     fun cancelReservation(
         @PathVariable id: Long,
+        @RequestBody req: LifecycleActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): MatchReservationResponse = matchService.cancelReservation(user.id, id)
+    ): MatchReservationResponse = matchService.cancelReservation(user.id, id, req.lifecycleId)
 
     /** Member: join waiting list. */
     @PostMapping("/{id}/waitlist")
@@ -97,22 +98,25 @@ class MatchController(private val matchService: MatchService) {
     @DeleteMapping("/{id}/waitlist")
     fun leaveWaitlist(
         @PathVariable id: Long,
+        @RequestBody req: LifecycleActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): WaitlistEntryResponse = matchService.leaveWaitlist(user.id, id)
+    ): WaitlistEntryResponse = matchService.leaveWaitlist(user.id, id, req.lifecycleId)
 
     /** Member: accept waiting-list offer. */
     @PostMapping("/{id}/waitlist/accept")
     fun acceptOffer(
         @PathVariable id: Long,
+        @RequestBody request: OfferActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): MatchReservationResponse = matchService.acceptWaitlistOffer(user.id, id)
+    ): MatchReservationResponse = matchService.acceptWaitlistOffer(user.id, id, request.offerId).getOrThrow()
 
     /** Member: decline waiting-list offer. */
     @PostMapping("/{id}/waitlist/decline")
     fun declineOffer(
         @PathVariable id: Long,
+        @RequestBody request: OfferActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): WaitlistEntryResponse = matchService.declineWaitlistOffer(user.id, id)
+    ): WaitlistEntryResponse = matchService.declineWaitlistOffer(user.id, id, request.offerId)
 
     /** Member: own waitlist entries. */
     @GetMapping("/my-waitlist")
@@ -187,5 +191,5 @@ class AdminMatchController(private val matchService: MatchService) {
         @PathVariable id: Long,
         @RequestBody req: AdminMarkPaidRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): AdminReservationResponse = matchService.markReservationPaid(user.id, id, req.paid)
+    ): AdminReservationResponse = matchService.markReservationPaid(user.id, id, req.paid, req.lifecycleId)
 }

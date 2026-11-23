@@ -304,10 +304,13 @@ function MatchDetailPanel({ matchId, onClose, onRefresh }) {
     setBusyId(res.id)
     setNotice(null)
     try {
-      await api.patch(`/admin/matchmaking/reservations/${res.id}/payment`, { paid: res.paymentStatus !== 'paid' })
+      await api.patch(`/admin/matchmaking/reservations/${res.id}/payment`, { paid: res.paymentStatus !== 'paid', lifecycleId: res.lifecycleId })
       setNotice({ type: 'success', text: tr('paymentUpdated', ar) })
       load(); onRefresh()
-    } catch (err) { setNotice({ type: 'error', text: errorMessage(err) }) }
+    } catch (err) {
+      const refreshMessage = ar ? 'حدّث الصفحة لعرض الحجز الحالي.' : 'Refresh to see the current reservation.'
+      setNotice({ type: 'error', text: err.response?.status === 409 ? refreshMessage : errorMessage(err) })
+    }
     finally { setBusyId(null) }
   }
 
