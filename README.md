@@ -102,7 +102,7 @@ npm install
 npm run dev
 ```
 
-The frontend Vite proxy forwards `/api` requests to `http://localhost:8080`.
+The frontend Vite proxy forwards `/api` requests to the backend at `http://127.0.0.1:18080`.
 
 ### Build the deployable JAR
 
@@ -117,7 +117,8 @@ The member login, registration and staff login share the Arabic Clerk localizati
 
 ## Database identities for local development and staging
 
-The backend runs Flyway at startup by default. Configure two independent logins for the
+The backend does **not** run Flyway at startup (`spring.flyway.enabled=false`); apply
+migrations separately as the migrator (step 4). Configure two independent logins for the
 same PostgreSQL 16 database. Use a dedicated cluster or review cluster-wide role names
 and database access with the DBA first. The PostgreSQL container bootstrap user is for
 administration only.
@@ -138,16 +139,17 @@ restore procedure before scheduling a separate network cutover.
 2. Set independent credentials through your secret manager or use interactive psql
    commands `\password fortylove_app` and `\password fortylove_migrator`. Keep the
    trigger owner `fortylove_claim_writer` as NOLOGIN with no memberships.
-3. Supply `DB_URL`, `DB_USERNAME=fortylove_app`, and `DB_PASSWORD` for the application
-   pool. For startup migration, also supply `FLYWAY_USERNAME=fortylove_migrator` and
-   `FLYWAY_PASSWORD`. The JDBC URL is shared. Spring validates the runtime session
-   identity on each new connection. Keep the existing Clerk and JWT configuration.
+3. Supply `DB_URL` (required, there is no default), `DB_USERNAME=fortylove_app`, and
+   `DB_PASSWORD` for the application pool. Spring validates the runtime session
+   identity on each new connection. Configure Clerk as in `backend/CLERK_AUTH_SETUP.md`;
+   legacy password login stays off unless `LEGACY_JWT_ENABLED=true` (only then is
+   `JWT_SECRET` needed). See `backend/.env.example` for all names.
    From `backend`, use `gradlew.bat bootRun` on Windows.
-4. For staging with separated secrets, prefer a release job running a compatible
-   Flyway version against `backend/src/main/resources/db/migration` as the migrator.
-   Only after it succeeds, start the web service with `SPRING_FLYWAY_ENABLED=false`
-   and the runtime credentials alone. Startup migration otherwise places both secrets
-   in the backend process. Keep either login out of frontend/Vite variables and logs.
+4. Apply migrations with a release job (or a one-off run) of a compatible Flyway
+   version against `backend/src/main/resources/db/migration` as the migrator. Only
+   after it succeeds, start the web service with the runtime credentials alone, so the
+   migrator secret never enters the backend process. Keep either login out of
+   frontend/Vite variables and logs.
 5. For an existing V8 database, inventory ownership, ACLs, role memberships, schema
    privileges, and Flyway history before rollout. The migrator must control application
    objects and Flyway history. Rehearse any necessary object-specific ownership changes
@@ -166,8 +168,46 @@ Only the migrator can switch to the function owner under the supplied bootstrap.
 
 **Verification.** Run `python backend/src/test/postgresql/court_scheduling.py` with Docker
 available. It launches and removes a network-isolated PostgreSQL 16 database. For the
-backend suite, configure a **fresh disposable** PostgreSQL database with the above roles
-and secrets, then run `gradlew.bat test --rerun-tasks` from `backend`. Verify the role
+booking versus match-edit regression, it runs both commit orders as the restricted
+application role and checks rollback, occupancy, bookings, and participant records.
+
+
+**Database tests.** `gradlew.bat test` runs unit tests only and never opens a database
+connection: classes annotated `@DatabaseIntegrationTest` are excluded and database
+variables are removed from the test JVM. Database-backed tests run only through
+`gradlew.bat databaseTest`, and only against the disposable `fortylove-automated-tests`
+container on `127.0.0.1:55434`. Set `FORTYLOVE_TEST_DB_URL=jdbc:postgresql://127.0.0.1:55434/fortylove`,
+`FORTYLOVE_TEST_DB_USERNAME=fortylove_app`, `FORTYLOVE_TEST_DB_PASSWORD`, the full
+`FORTYLOVE_TEST_CONTAINER_ID` and `FORTYLOVE_TEST_SYSTEM_IDENTIFIER`
+(`SELECT system_identifier FROM pg_control_system()`). Gradle and the test JVM verify the
+exact URL, the Docker identity (tmpfs data, sole publisher of 55434) and, on every
+connection, the role, database and cluster identifier; anything else is refused before
+connecting. The container keeps its data in tmpfs: after any restart, rebuild roles and
+migrations and update the system identifier. Never point these variables at 5433
+(`fortylove-db`) or 55433 (restore). Verify the role
 boundary again after changes to default privileges or database ownership. In staging
 check member booking, staff publication, court closure, early completion and slot
 availability with approved test accounts.
+
+### Configuration changes (breaking)
+
+| Change | Who is affected | How to keep the previous behaviour |
+|---|---|---|
+| `DB_URL` has no default | Local `bootRun` and any run without it | Set `DB_URL` explicitly |
+| Legacy JWT (password login) is off by default | Legacy API clients; the website uses Clerk only | `LEGACY_JWT_ENABLED=true` (needs `JWT_SECRET`, or the `local` profile) |
+| `JWT_SECRET` is required only when legacy JWT is enabled | Production no longer needs it | — |
+| Production uses `CLERK_API_AUDIENCE` and `APP_PUBLIC_ORIGIN` | Environments still setting `CLERK_AUDIENCE` / `PUBLIC_ORIGIN` | Rename the variables (no fallback) |
+| Flyway does not run at startup | Anyone relying on startup migration | Run Flyway separately as the migrator |
+| Backend dev port is 18080 | Local tools pointing at 8080 | Use 18080 (the Vite proxy already does) |
+
+### Reverse proxy and rate limits
+
+The API limits each client per minute: 20 sensitive POSTs (login, contact, bootstrap), 30 member
+writes (`API_WRITE_PER_MINUTE`: bookings, match joins, waitlist) and 240 other API requests. The
+limiter is in memory, which suits the single production instance; several instances need a
+shared limiter (or the proxy's own limits). By default the client is the TCP peer and
+`X-Forwarded-For` is ignored. Behind a reverse proxy, set `TRUSTED_PROXIES` to the proxy's IP or
+CIDR range (comma-separated literals only, for example `10.0.0.0/8`); otherwise every user shares the
+proxy's address and one limit. Only a connection from a listed proxy may report the client address,
+and the forwarded chain is read from the right, so values a client prepends are ignored. An invalid
+entry stops start-up.

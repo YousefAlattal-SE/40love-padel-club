@@ -30,28 +30,32 @@ CLERK_ISSUER=https://<exact-clerk-frontend-api-url>
 CLERK_API_AUDIENCE=fortylove-api
 CLERK_AUTHORIZED_PARTIES=http://localhost:5173,https://<exact-production-origin>
 CLERK_SECRET_KEY=<backend-only-secret-manager-value>
-JWT_SECRET=<existing-legacy-jwt-secret-during-transition>
+# Only when legacy password login must stay available:
+# LEGACY_JWT_ENABLED=true
+# JWT_SECRET=<existing-legacy-jwt-secret-during-transition>
 ```
+
+Legacy JWT (password login) is **off by default** (`LEGACY_JWT_ENABLED=false`). While it is off, `/api/auth/login` returns 404, legacy tokens are rejected and `JWT_SECRET` is not read. Production (`prod`/`production` profile) refuses to start with legacy enabled. The rest of this paragraph applies only when `LEGACY_JWT_ENABLED=true`.
 
 With only `SPRING_PROFILES_ACTIVE=local` explicitly enabled, `JWT_SECRET` may be omitted: the backend creates and reuses a random
 local-only signing key at `%USERPROFILE%\\.fortylove\\local-jwt-secret` on Windows (or
 `~/.fortylove/local-jwt-secret` elsewhere). This keeps legacy JWTs stable across local
 restarts without putting a secret in source control. Every other profile combination, including the default, requires an explicit strong `JWT_SECRET`. Keep a distinct secret per environment and API. Legacy tokens now require issuer `fortylove-legacy`, audience `fortylove-api`, issuance and expiry. `JWT_LIFETIME_MINUTES` defaults to 30 (range 1–60). Previously issued legacy tokens require a fresh password sign-in; existing accounts and Clerk sessions are preserved. Coordinate the cutover for every backend replica and legacy client.
 
-Set only the Clerk **Publishable Key** in the frontend as `VITE_CLERK_PUBLISHABLE_KEY`. The migration file `V7__clerk_auth.sql` exists in source. Its applied status must be checked in the target database's `flyway_schema_history`; this source tree does not establish whether the database has run it. Spring Boot's configured Flyway startup can apply pending migrations automatically, so do not start the backend against the target database until V7's history is verified and any required migration has approval.
+Set only the Clerk **Publishable Key** in the frontend as `VITE_CLERK_PUBLISHABLE_KEY`. The migration file `V7__clerk_auth.sql` exists in source. Its applied status must be checked in the target database's `flyway_schema_history`; this source tree does not establish whether the database has run it. Flyway does not run at backend startup (`spring.flyway.enabled=false`); migrations are applied separately as the migrator and need approval for any persistent database.
 
 The Clerk Secret Key is used only by the backend to retrieve the authenticated user's canonical profile for first-time provisioning. User ID, email, and name are never accepted from a bootstrap request body. The optional registration phone value is read from Clerk's Backend API `unsafe_metadata` and is never used for identity or authorization. Database role always comes from PostgreSQL.
 
-`CLERK_AUTH_ENABLED=false` keeps the existing legacy filter active. When enabled, the backend temporarily accepts both the legacy JJWT and verified Clerk session JWT flows. The legacy flow is retained until the Clerk integration has passed its end-to-end checks.
+`CLERK_AUTH_ENABLED=false` requires `LEGACY_JWT_ENABLED=true` (at least one provider must be enabled) and keeps only the legacy filter active. With Clerk enabled, legacy JJWT tokens are additionally accepted only when `LEGACY_JWT_ENABLED=true`.
 
 ## Database environment
 
 The backend reads its PostgreSQL connection settings from the process environment:
 
-- `DB_URL` is optional and defaults to `jdbc:postgresql://localhost:5433/fortylove` for local development.
-- `DB_USERNAME` and `DB_PASSWORD` are required. Set them to the credentials for the local or deployed database through the process environment or a secret manager; do not commit or log their values.
+- `DB_URL` is required and has no default, so the backend can never fall back to a protected database.
+- `DB_USERNAME` (default `fortylove_app`) and `DB_PASSWORD` must be the restricted runtime login. Set them through the process environment or a secret manager; do not commit or log their values.
 
-The default URL preserves the existing local development endpoint. No database credentials are included in source configuration.
+No database credentials are included in source configuration. See `backend/.env.example` for every variable name.
 
 ## Enrollment after retiring legacy registration
 
