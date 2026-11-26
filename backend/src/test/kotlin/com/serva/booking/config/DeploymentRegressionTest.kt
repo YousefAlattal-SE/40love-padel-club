@@ -10,8 +10,10 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.transaction.annotation.Transactional
+import com.serva.booking.testsupport.DatabaseIntegrationTest
 import org.springframework.web.context.WebApplicationContext
 
+@DatabaseIntegrationTest
 @SpringBootTest
 @Transactional
 class DeploymentRegressionTest(@Autowired context: WebApplicationContext) {

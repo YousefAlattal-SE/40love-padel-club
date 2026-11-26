@@ -198,6 +198,41 @@ def exercise():
     assert sql(f"SELECT ends_at='{end}' FROM court_occupancy WHERE match_id=903") == "t"
     print("PASS closure, release, original completion interval and end-time reuse")
 
+    original = "2035-01-06 10:00+00"
+    original_end = "2035-01-06 11:00+00"
+    target = "2035-01-06 12:00+00"
+    target_end = "2035-01-06 13:00+00"
+    sql(match(904, original, original_end, "published"))
+    sql("""INSERT INTO match_reservations(match_id,user_id,price_snapshot,payment_status)
+           VALUES (904,900,8,'paid');
+           INSERT INTO match_waitlist(match_id,user_id) VALUES (904,900)""")
+    participants = """SELECT to_jsonb(r) FROM match_reservations r WHERE match_id=904;
+                      SELECT to_jsonb(w) FROM match_waitlist w WHERE match_id=904"""
+    participation_before = sql(participants)
+    match_before = sql("SELECT to_jsonb(m) FROM matches m WHERE id=904")
+    claim_before = sql("SELECT to_jsonb(c) FROM court_occupancy c WHERE match_id=904")
+    move = f"UPDATE matches SET starts_at='{target}', ends_at='{target_end}' WHERE id=904"
+    competing_booking = booking(target, target_end)
+
+    contend(competing_booking, "BEGIN; UPDATE matches SET description='rollback marker' WHERE id=904; " + move + "; COMMIT;")
+    assert sql("SELECT to_jsonb(m) FROM matches m WHERE id=904") == match_before
+    assert sql("SELECT to_jsonb(c) FROM court_occupancy c WHERE match_id=904") == claim_before
+    active_target_bookings = f"""FROM bookings WHERE court_id=900
+                                    AND starts_at='{target}' AND status='confirmed'"""
+    assert sql("SELECT count(*) " + active_target_bookings) == "1"
+    sql("UPDATE bookings SET status='cancelled' WHERE id IN (SELECT id " + active_target_bookings + ")")
+    bookings_before = sql("SELECT to_jsonb(b) FROM bookings b ORDER BY id")
+
+    contend(move, competing_booking)
+    assert sql("SELECT to_jsonb(b) FROM bookings b ORDER BY id") == bookings_before
+    assert sql(f"""SELECT count(*) FROM court_occupancy WHERE court_id=900
+                   AND tstzrange(starts_at,ends_at,'[)') && tstzrange('{target}','{target_end}','[)')""") == "1"
+    assert sql(f"""SELECT c.starts_at=m.starts_at AND c.ends_at=m.ends_at
+                   AND m.starts_at='{target}' AND m.ends_at='{target_end}'
+                   FROM court_occupancy c JOIN matches m ON m.id=c.match_id WHERE m.id=904""") == "t"
+    assert sql(participants) == participation_before
+    print("PASS booking versus published match edit in both commit orders, SQLSTATE 23P01 and consistent rollback")
+
 
 if __name__ == "__main__":
     env = dict(os.environ, POSTGRES_PASSWORD=secrets.token_urlsafe(36))

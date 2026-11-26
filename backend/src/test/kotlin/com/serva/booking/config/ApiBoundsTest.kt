@@ -15,11 +15,13 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
+import com.serva.booking.testsupport.DatabaseIntegrationTest
 import org.springframework.web.context.WebApplicationContext
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneOffset
 
+@DatabaseIntegrationTest
 @SpringBootTest(properties = ["app.public-origin=https://club.example.test"])
 @Transactional
 class ApiBoundsTest(@Autowired context: WebApplicationContext, @Autowired private val jdbc: JdbcTemplate) {
