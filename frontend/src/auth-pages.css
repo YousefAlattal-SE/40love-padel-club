@@ -1,0 +1,190 @@
+/* Authentication screens (member sign-in/up, staff sign-in, Clerk reset and verification steps).
+   Color and type tokens come from club-foundation.css via .club-operations. */
+.auth-shell {
+  --auth-pad: clamp(18px, 4vw, 56px);
+  --auth-control: 48px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100dvh;
+  color: var(--club-ink);
+  background: var(--club-bg);
+  font: 450 1rem/1.55 var(--club-sans);
+}
+
+.auth-shell a { color: var(--club-accent); text-underline-offset: .2em; }
+.auth-shell :is(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--club-focus);
+  outline-offset: 3px;
+}
+
+.auth-skip {
+  position: absolute;
+  inset-inline-start: 12px;
+  inset-block-start: -100px;
+  z-index: 10;
+  padding: 10px 14px;
+  background: var(--club-surface);
+  border: 1px solid var(--club-control);
+}
+.auth-skip:focus { inset-block-start: 12px; }
+
+/* Top bar */
+.auth-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px var(--auth-pad);
+  border-block-end: 1px solid var(--club-line);
+}
+.auth-brand { display: inline-flex; align-items: center; gap: 12px; min-height: 44px; text-decoration: none; }
+.auth-shell .auth-brand { color: var(--club-ink); }
+.auth-brand img { width: 40px; height: 40px; object-fit: cover; }
+.auth-brand span { display: grid; line-height: 1.1; }
+.auth-brand strong { font-size: 1.3rem; font-weight: 700; letter-spacing: -.05em; }
+.auth-brand small { font-size: .78rem; color: var(--club-muted); }
+.auth-tools { display: flex; gap: 8px; }
+.auth-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  color: var(--club-ink);
+  background: transparent;
+  border: 1px solid var(--club-control);
+  border-radius: var(--club-radius);
+  font: inherit;
+  font-size: .92rem;
+  cursor: pointer;
+}
+.auth-tool--icon { padding: 0; }
+.auth-tool:hover { background: var(--club-soft); }
+
+/* Main spread */
+.auth-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: var(--auth-pad);
+  width: min(100%, 1440px);
+  margin-inline: auto;
+  padding: clamp(28px, 5vw, 72px) var(--auth-pad);
+}
+.auth-main:focus { outline: none; }
+.auth-panel { width: min(100%, 440px); justify-self: center; }
+.auth-eyebrow {
+  margin: 0 0 10px;
+  color: var(--club-muted);
+  font-size: .8rem;
+  font-weight: 650;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+:root[lang='ar'] .auth-eyebrow { letter-spacing: normal; font-size: .9rem; }
+.auth-shell .auth-panel h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 4.2vw, 3.6rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -.05em;
+}
+:root[lang='ar'] .auth-shell .auth-panel h1 { line-height: 1.35; letter-spacing: normal; }
+.auth-intro { margin: 14px 0 0; color: var(--club-muted); max-width: 38ch; }
+.auth-body { margin-block-start: 28px; }
+.auth-back { display: inline-flex; align-items: center; min-height: 44px; margin-block-start: 16px; }
+.auth-figure { margin: 0; }
+.auth-figure img {
+  display: block;
+  width: 100%;
+  height: clamp(460px, 68vh, 720px);
+  object-fit: cover;
+  object-position: center 35%;
+}
+
+/* Footer */
+.auth-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  padding: 16px var(--auth-pad);
+  color: var(--club-muted);
+  border-block-start: 1px solid var(--club-line);
+  font-size: .88rem;
+}
+.auth-foot nav { display: flex; gap: 18px; }
+.auth-foot a { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* Status, notices and actions */
+.auth-status {
+  display: grid;
+  gap: 10px;
+  padding: 20px;
+  background: var(--club-surface);
+  border: 1px solid var(--club-line);
+  border-inline-start: 3px solid var(--club-accent);
+}
+.auth-status p { margin: 0; }
+.auth-status--error, .auth-status--denied { border-inline-start-color: var(--club-error); }
+.auth-status-title { font-weight: 650; }
+.auth-status--error .auth-status-title, .auth-status--denied .auth-status-title { color: var(--club-error); }
+.auth-status-detail { color: var(--club-muted); overflow-wrap: anywhere; }
+.auth-notice { margin-block-end: 18px; }
+.auth-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-block-start: 6px; }
+.auth-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 18px;
+  border: 1px solid var(--club-accent);
+  border-radius: var(--club-radius);
+  font: inherit;
+  font-weight: 650;
+  text-decoration: none;
+  cursor: pointer;
+}
+.auth-shell .auth-button--primary { color: var(--club-on-accent); background: var(--club-accent); }
+.auth-shell .auth-button--secondary { color: var(--club-accent); background: transparent; }
+.auth-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--club-line);
+  border-block-start-color: var(--club-accent);
+  border-radius: 50%;
+  animation: auth-spin .8s linear infinite;
+}
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .auth-spinner { animation-duration: 2.4s; } }
+
+/* Clerk components inside the frame (styled further through appearance in clerkAppearance.js). */
+.auth-shell :is(.cl-rootBox, .cl-cardBox, .cl-card) { width: 100%; max-width: 100%; }
+.auth-shell .cl-cardBox { border: 0; box-shadow: none; }
+/* The page heading already introduces the first step; later steps (reset, codes) keep Clerk's own title. */
+.auth-shell :is(.cl-signIn-start, .cl-signUp-start) .cl-header { display: none; }
+.auth-shell .cl-formFieldInput:focus-visible,
+.auth-shell .cl-otpCodeFieldInput:focus-visible,
+.auth-shell .cl-formButtonPrimary:focus-visible,
+.auth-shell .cl-socialButtonsBlockButton:focus-visible {
+  outline: 3px solid var(--club-focus);
+  outline-offset: 2px;
+}
+/* Verification codes are always read left to right. */
+.auth-shell .cl-otpCodeFieldInputs { direction: ltr; }
+.auth-shell .cl-footerItem p { color: var(--club-muted); }
+
+/* Tablet and mobile */
+@media (max-width: 960px) {
+  .auth-main { grid-template-columns: minmax(0, 1fr); align-items: start; }
+  .auth-figure { display: none; }
+  .auth-panel { width: min(100%, 480px); }
+}
+@media (max-width: 520px) {
+  .auth-brand small { display: none; }
+  .auth-main { padding-block: 24px 36px; }
+  .auth-body { margin-block-start: 22px; }
+  .auth-foot { justify-content: center; text-align: center; }
+}
