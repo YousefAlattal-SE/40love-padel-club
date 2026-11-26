@@ -16,16 +16,19 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
+import com.serva.booking.testsupport.DatabaseIntegrationTest
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDate
 import java.time.ZoneOffset
 
+@DatabaseIntegrationTest
 @SpringBootTest
 @Transactional
 class CourtSchedulingHttpTest(
     @Autowired context: WebApplicationContext,
     @Autowired private val jdbc: JdbcTemplate,
     @Autowired private val availability: AvailabilityRepository,
+    @Autowired private val entityManager: jakarta.persistence.EntityManager,
 ) {
     private val mvc = MockMvcBuilders.webAppContextSetup(context)
         .apply<DefaultMockMvcBuilder>(springSecurity()).build()
@@ -63,11 +66,25 @@ class CourtSchedulingHttpTest(
         mvc.perform(request()).andExpect(status().isUnauthorized)
         mvc.perform(request().with(user("member").roles("MEMBER"))).andExpect(status().isForbidden)
         mvc.perform(request().with(user("staff").roles("ADMIN"))).andExpect(status().isOk)
-        mvc.perform(patch(url).with(user("staff").roles("ADMIN")).contentType("application/json")
-            .content("""{"status":"completed"}""")).andExpect(status().isOk)
-        val claims = availability.bookedRanges(start.toInstant(), end.plusHours(2).toInstant()).filter { it.courtId == court }
-        assertEquals(listOf(end.toInstant()), claims.map { it.startsAt })
-        assertEquals(listOf(end.plusHours(1).toInstant()), claims.map { it.endsAt })
+        fun complete() = patch(url).with(user("staff").roles("ADMIN")).contentType("application/json")
+            .content("""{"status":"completed"}""")
+        // The moved match has not started yet, so completing it is refused (security item 6.1).
+        mvc.perform(complete()).andExpect(status().isBadRequest)
+        val moved = availability.bookedRanges(start.toInstant(), end.plusHours(2).toInstant()).filter { it.courtId == court }
+        assertEquals(listOf(end.toInstant()), moved.map { it.startsAt })
+        assertEquals(listOf(end.plusHours(1).toInstant()), moved.map { it.endsAt })
+
+        // Once the match has started, completion keeps its current claimed interval. The test runs in a
+        // rolled-back transaction; one year back avoids any committed fixture from other test classes.
+        val started = end.minusYears(1)
+        jdbc.update("update matches set starts_at=?, ends_at=? where id=?", started, started.plusHours(1), id)
+        // The whole test shares one transaction, so drop the match entity cached by the earlier
+        // requests; otherwise the next request would read its pre-update (future) start time.
+        entityManager.clear()
+        mvc.perform(complete()).andExpect(status().isOk)
+        val claims = availability.bookedRanges(started.toInstant(), started.plusHours(2).toInstant()).filter { it.courtId == court }
+        assertEquals(listOf(started.toInstant()), claims.map { it.startsAt })
+        assertEquals(listOf(started.plusHours(1).toInstant()), claims.map { it.endsAt })
     }
 
     @Test

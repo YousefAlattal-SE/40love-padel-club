@@ -144,6 +144,12 @@ class MatchService(
         // Validate new status transitions
         validateStatusTransition(match.status, newStatus)
 
+        // Completion closes participants and records the match as played, so it is only valid once
+        // the match has started (security item 6.1; club decision: no completion before start).
+        if (newStatus == MatchStatus.completed && match.startsAt.isAfter(Instant.now())) {
+            throw BookingRuleException("A match cannot be completed before it starts")
+        }
+
         if (newStatus == MatchStatus.completed &&
             (newCourtId != match.courtId || newStart != match.startsAt || newEnd != match.endsAt)
         ) {
@@ -238,9 +244,14 @@ class MatchService(
             throw AlreadyReservedException()
         }
 
-        // Count confirmed spots
+        // Count confirmed spots plus spots held by active waiting-list offers (security item 19.1):
+        // a freed spot being offered to the next member in the queue cannot be taken by a direct join.
+        // The joiner's own offer and expired offers do not hold a spot.
         val confirmedCount = reservationRepo.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)
-        if (confirmedCount >= match.maxPlayers) {
+        val now = Instant.now()
+        val heldByOffers = waitlistRepo.findByMatchIdAndStatus(matchId, WaitlistStatus.offered)
+            .count { it.userId != userId && it.offerExpiresAt?.isAfter(now) == true }
+        if (confirmedCount + heldByOffers >= match.maxPlayers) {
             throw MatchFullException()
         }
 
@@ -248,6 +259,7 @@ class MatchService(
             if (existing != null) {
                 // Re-joining after cancellation: update existing record
                 existing.status = MatchReservationStatus.confirmed
+                refreshUnpaidPrice(existing, match)
                 existing.lifecycleId = java.util.UUID.randomUUID()
                 existing.updatedAt = Instant.now()
                 reservationRepo.saveAndFlush(existing)
@@ -423,6 +435,7 @@ class MatchService(
         if (existingReservation?.status == MatchReservationStatus.confirmed) throw AlreadyReservedException()
         val reservation = if (existingReservation != null) {
             existingReservation.status = MatchReservationStatus.confirmed
+            refreshUnpaidPrice(existingReservation, match)
             existingReservation.lifecycleId = java.util.UUID.randomUUID()
             existingReservation.updatedAt = Instant.now()
             reservationRepo.saveAndFlush(existingReservation)
@@ -443,6 +456,16 @@ class MatchService(
         val court = courtRepo.findById(match.courtId).orElseThrow()
         offerSpotToNextOnWaitlist(matchId)
         return Result.success(toReservationResponse(reservation, match, court.name))
+    }
+
+    /**
+     * Security item 19.2 (club decision): a re-confirmed seat that was paid keeps its status and the
+     * price it was paid at (there is no refund flow); an unpaid seat takes the match's current price.
+     */
+    private fun refreshUnpaidPrice(reservation: MatchReservation, match: Match) {
+        if (reservation.paymentStatus != MatchPaymentStatus.paid) {
+            reservation.priceSnapshot = match.pricePerPlayer
+        }
     }
 
     // ─── Member: decline waiting-list offer ───────────────────────────────────

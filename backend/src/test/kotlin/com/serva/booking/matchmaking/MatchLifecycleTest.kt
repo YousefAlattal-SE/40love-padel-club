@@ -19,6 +19,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.web.context.WebApplicationContext
+import com.serva.booking.testsupport.DatabaseIntegrationTest
 import java.util.UUID
 import java.util.concurrent.Callable
 import java.util.concurrent.CyclicBarrier
@@ -26,6 +27,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
 /** These tests require committed fixtures and independent transactions on disposable PostgreSQL. */
+@DatabaseIntegrationTest
 @SpringBootTest
 class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db: JdbcTemplate,
                          @Autowired context: WebApplicationContext) {
@@ -233,7 +235,11 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
 
     @Test fun fullOfferRejectionCommits() {
         offer()
-        join(4)
+        // Item 19.1: a direct join can no longer take the spot that is being offered to member 2.
+        assertThrows(MatchFullException::class.java) { join(4) }
+        assertEquals("offered", state(2))
+        // The full-offer rejection path still commits when the spot is filled by other means.
+        db.update("insert into match_reservations(match_id,user_id,price_snapshot) values (?,?,5)", match, users[4])
         mvc.perform(action("accept", 2, offerId(2))).andExpect(status().isBadRequest)
         assertEquals("expired", state(2))
         assertEquals("waiting", state(3))
@@ -267,6 +273,11 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         assertThrows(org.springframework.web.server.ResponseStatusException::class.java) { service.declineWaitlistOffer(users[2], match, offerId(2)) }
         assertEquals("declined", state(2))
         assertEquals("offered", state(3))
+        // Completion is only allowed once the match has started (security item 6.1).
+        assertThrows(BookingRuleException::class.java) {
+            service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
+        }
+        moveToStartedSlot()
         service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
         assertEquals("removed", state(3))
         assertEquals(1L, confirmed())
@@ -282,9 +293,28 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         assertEquals(confirmed(), id("select max_players from matches where id=?", match))
     }
 
+    /**
+     * Moves the fixture match into an already-started slot that no other fixture can occupy.
+     *
+     * This class commits its fixtures, so a slot relative to now() stays published on the same
+     * court and blocks the next run (exclusion constraint) for up to an hour. The slot is instead
+     * derived from the fixture's unique user id on a fixed past anchor: whole hours, 2-hour stride,
+     * 1-hour length. Ids are never reused, so it cannot overlap a slot from this or any earlier run
+     * (future fixtures use current_date + id + 100 days and never reach the past).
+     */
+    private fun moveToStartedSlot() {
+        val slot = users.first().toInt()
+        assertEquals(1, db.update("""update matches
+            set starts_at = timestamptz '2000-01-01 10:00:00+00' + make_interval(hours => 2 * ?),
+                ends_at   = timestamptz '2000-01-01 11:00:00+00' + make_interval(hours => 2 * ?)
+            where id=?""", slot, slot, match))
+        assertEquals(1L, id("select count(*) from matches where id=? and starts_at < now()", match),
+            "The derived started slot must lie in the past")
+    }
+
     @Test fun startedMatchCannotPromoteOrAccept() {
         offer()
-        db.update("update matches set starts_at=now()-interval '1 minute', ends_at=now()+interval '59 minutes' where id=?", match)
+        moveToStartedSlot()
         mvc.perform(action("accept", 2, offerId(2))).andExpect(status().isBadRequest)
         assertEquals("expired", state(2))
         assertEquals("waiting", state(3))

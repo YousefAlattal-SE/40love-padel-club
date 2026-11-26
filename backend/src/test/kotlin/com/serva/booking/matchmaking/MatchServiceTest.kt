@@ -254,4 +254,79 @@ class MatchServiceTest {
             matchService.joinMatch(userId, matchId)
         }
     }
+
+    @Test
+    fun `a match cannot be marked completed before it starts`() {
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(mockMatch(status = MatchStatus.published))
+
+        val error = assertThrows(com.serva.booking.BookingRuleException::class.java) {
+            matchService.updateMatch(matchId, UpdateMatchRequest(status = MatchStatus.completed))
+        }
+        assertEquals("A match cannot be completed before it starts", error.message)
+        org.mockito.Mockito.verify(matchRepository, org.mockito.Mockito.never()).saveAndFlush(any(Match::class.java))
+    }
+
+    // ─── Item 19.1 (B-1): an active waiting-list offer holds its spot ─────────
+
+    private fun offerTo(user: Long, expiresIn: Long) = MatchWaitlistEntry(
+        matchId = matchId, userId = user, status = WaitlistStatus.offered,
+        offerId = java.util.UUID.randomUUID(), offerExpiresAt = Instant.now().plusSeconds(expiresIn),
+    )
+
+    private fun oneSpotLeft(vararg offers: MatchWaitlistEntry) {
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(mockMatch(status = MatchStatus.published))
+        `when`(reservationRepository.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)).thenReturn(3L)
+        `when`(waitlistRepository.findByMatchIdAndStatus(matchId, WaitlistStatus.offered)).thenReturn(offers.toList())
+        `when`(reservationRepository.findByMatchIdAndUserId(matchId, userId)).thenReturn(null)
+        `when`(reservationRepository.saveAndFlush(any(MatchReservation::class.java))).thenAnswer { it.arguments[0] }
+    }
+
+    @Test
+    fun `a direct join cannot take a spot that is being offered to the waiting list`() {
+        oneSpotLeft(offerTo(user = 7L, expiresIn = 600))
+        assertThrows(MatchFullException::class.java) { matchService.joinMatch(userId, matchId) }
+        org.mockito.Mockito.verify(reservationRepository, org.mockito.Mockito.never()).saveAndFlush(any(MatchReservation::class.java))
+    }
+
+    @Test
+    fun `an expired offer no longer holds the spot`() {
+        oneSpotLeft(offerTo(user = 7L, expiresIn = -1))
+        assertEquals(MatchReservationStatus.confirmed, matchService.joinMatch(userId, matchId).status)
+    }
+
+    @Test
+    fun `the member holding the offer is not blocked by their own offer`() {
+        oneSpotLeft(offerTo(user = userId, expiresIn = 600))
+        assertEquals(MatchReservationStatus.confirmed, matchService.joinMatch(userId, matchId).status)
+    }
+
+    // ─── Item 19.2 (B-2): rejoin keeps paid seats, refreshes unpaid prices ────
+
+    private fun rejoinAfterPriceChange(paid: Boolean): MatchReservationResponse {
+        `when`(matchRepository.findByIdForUpdate(matchId)).thenReturn(mockMatch(status = MatchStatus.published))
+        `when`(reservationRepository.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)).thenReturn(1L)
+        val previous = MatchReservation(
+            id = 55L, matchId = matchId, userId = userId,
+            status = MatchReservationStatus.cancelled,
+            paymentStatus = if (paid) MatchPaymentStatus.paid else MatchPaymentStatus.unpaid,
+            priceSnapshot = BigDecimal("8.00"),
+        )
+        `when`(reservationRepository.findByMatchIdAndUserId(matchId, userId)).thenReturn(previous)
+        `when`(reservationRepository.saveAndFlush(any(MatchReservation::class.java))).thenAnswer { it.arguments[0] }
+        return matchService.joinMatch(userId, matchId)
+    }
+
+    @Test
+    fun `an unpaid seat that rejoins takes the current match price`() {
+        val res = rejoinAfterPriceChange(paid = false)
+        assertEquals(BigDecimal("10.00"), res.pricePerPlayer)
+        assertEquals(MatchPaymentStatus.unpaid, res.paymentStatus)
+    }
+
+    @Test
+    fun `a paid seat that rejoins keeps its paid price and status`() {
+        val res = rejoinAfterPriceChange(paid = true)
+        assertEquals(BigDecimal("8.00"), res.pricePerPlayer)
+        assertEquals(MatchPaymentStatus.paid, res.paymentStatus)
+    }
 }

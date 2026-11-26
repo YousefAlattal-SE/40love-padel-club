@@ -94,8 +94,9 @@ class MatchReservation(
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     var paymentStatus: MatchPaymentStatus = MatchPaymentStatus.unpaid,
 
+    // Refreshed only when an unpaid seat is re-confirmed (security item 19.2); a paid seat keeps it.
     @Column(name = "price_snapshot")
-    val priceSnapshot: BigDecimal = BigDecimal.ZERO,
+    var priceSnapshot: BigDecimal = BigDecimal.ZERO,
 
     @Column(name = "paid_at")
     var paidAt: Instant? = null,
