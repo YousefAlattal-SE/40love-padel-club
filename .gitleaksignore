@@ -1,0 +1,6 @@
+# Public Clerk publishable test key (pk_test_...) inside old built bundles in the initial commit.
+# Publishable keys are public by design; these are not private secrets. Reviewed 2026-11-27.
+00aa600d01ec5eb42dcd55314cac8734f421ab2c:backend/src/main/resources/static/assets/index-Be411K4F.js:generic-api-key:29
+00aa600d01ec5eb42dcd55314cac8734f421ab2c:backend/src/main/resources/static/assets/index-Be411K4F.js:generic-api-key:174
+00aa600d01ec5eb42dcd55314cac8734f421ab2c:backend/src/main/resources/static/assets/index-zU2HVd-Y.js:generic-api-key:29
+00aa600d01ec5eb42dcd55314cac8734f421ab2c:backend/src/main/resources/static/assets/index-tuKwtPq-.js:generic-api-key:29
