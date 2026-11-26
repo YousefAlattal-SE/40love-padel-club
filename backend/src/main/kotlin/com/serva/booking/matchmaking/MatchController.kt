@@ -128,6 +128,7 @@ class MatchController(private val matchService: MatchService) {
 
 @RestController
 @RequestMapping("/api/admin/matchmaking")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
 class AdminMatchController(private val matchService: MatchService) {
 
     /** Admin: list all matches. */

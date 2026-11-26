@@ -86,9 +86,11 @@ data class AdminCustomerResponse(
     val bookingValue: BigDecimal,
 )
 
-// All routes under /api/admin are additionally restricted to ROLE_ADMIN in SecurityConfig.
+// All routes under /api/admin are restricted to ROLE_ADMIN in SecurityConfig; @PreAuthorize is a
+// second, method-level layer in case the URL rules are ever reordered (security item 9.1).
 @RestController
 @RequestMapping("/api/admin")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 class AdminController(private val jdbc: JdbcTemplate) {
 
     private val zone = ZoneId.of("Asia/Amman")
@@ -375,7 +377,8 @@ class AdminController(private val jdbc: JdbcTemplate) {
 
     private fun money(from: OffsetDateTime, until: OffsetDateTime): BigDecimal =
         jdbc.queryForObject(
-            "SELECT COALESCE(SUM(COALESCE(b.paid_amount, b.total_price)), 0) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.paid_at >= ? AND b.paid_at < ?",
+            // Waived bookings are settled but bring in no money (security item 19.3).
+            "SELECT COALESCE(SUM(COALESCE(b.paid_amount, b.total_price)), 0) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.paid_at >= ? AND b.paid_at < ? AND b.payment_method IS DISTINCT FROM 'waived'",
             BigDecimal::class.java,
             from,
             until,

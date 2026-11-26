@@ -85,6 +85,7 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
 
     // SecurityConfig requires ROLE_ADMIN for /api/admin/**.
     @RequestMapping("/admin/contact-messages", method = [RequestMethod.GET, RequestMethod.POST])
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
     fun listForAdmin(page: ApiPage, @Valid @RequestBody(required = false) criteria: StaffSearch?, @RequestParam(defaultValue = "all") filter: String): List<ContactMessageResponse> = jdbc.query(
         """
         SELECT id, name, phone, sport, legacy_sport, preferred_time, message, status, created_at
@@ -98,6 +99,7 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
     )
 
     @PatchMapping("/admin/contact-messages/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
     fun updateStatus(
         @PathVariable id: Long,
         @RequestBody request: UpdateContactMessageStatusRequest,
