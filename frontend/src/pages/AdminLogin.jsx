@@ -1,100 +1,106 @@
-import Icon from '../admin/AdminIcon'
-import { useEffect, useState } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { SignIn } from '@clerk/react'
-import { AdminSession } from '../admin/AdminUI'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth'
+import { useAuthPreferences } from '../authPreferences'
+import { authPageUrl, destinationFor, isAdminPath, isAdminUser, requestedPath, safeReturnPath } from '../authRouting'
 import { clerkAppearance } from '../clerkAppearance'
-import logo from '../assets/40love-logo-dark.png'
+import AuthShell, { AuthStatus } from '../components/AuthShell'
 import entrance from '../assets/40love-club-exterior-sunset.jpeg'
-import '../admin/admin.css'
 
 const COPY = {
   en: {
+    eyebrow: 'Club management',
     title: 'Staff sign-in',
-    help: 'Use your authorized administrator account to continue.', home: 'Back to website',
-    denied: 'This account does not have administrator access.', language: 'العربية', signOut: 'Sign out',
-    theme: 'Toggle appearance',
+    help: 'Use your authorized administrator account to continue.',
+    verifyingTitle: 'One moment.',
+    verifying: 'Checking administrator access…',
+    errorTitle: 'Unable to open the staff account.',
+    errorHelp: 'Try again, or sign out and sign in again.',
+    deniedTitle: 'No staff access.',
+    denied: 'This account does not have administrator access.',
+    memberArea: 'Go to the member area',
+    retry: 'Try again',
+    signOut: 'Sign out',
+    alt: 'The entrance to 40 LOVE at dusk',
   },
   ar: {
+    eyebrow: 'إدارة النادي',
     title: 'دخول فريق النادي',
-    help: 'استخدم حساب المسؤول المعتمد للمتابعة.', home: 'العودة إلى الموقع',
-    denied: 'هذا الحساب لا يملك صلاحيات الإدارة.', language: 'English', signOut: 'تسجيل الخروج',
-    theme: 'تبديل المظهر',
+    help: 'استخدم حساب المسؤول المعتمد للمتابعة.',
+    verifyingTitle: 'لحظة من فضلك.',
+    verifying: 'جارٍ التحقق من صلاحيات الإدارة…',
+    errorTitle: 'تعذّر فتح حساب الإدارة.',
+    errorHelp: 'حاول مرة أخرى، أو سجّل الخروج ثم سجّل الدخول من جديد.',
+    deniedTitle: 'لا توجد صلاحية إدارة.',
+    denied: 'هذا الحساب لا يملك صلاحيات الإدارة.',
+    memberArea: 'الانتقال إلى منطقة الأعضاء',
+    retry: 'حاول مرة أخرى',
+    signOut: 'تسجيل الخروج',
+    alt: 'مدخل نادي 40 LOVE عند الغروب',
   },
 }
 
 export default function AdminLogin() {
   const { user, loading, profileError, retryProfile, logout } = useAuth()
-  const location = useLocation()
-  const navigate = useNavigate()
-  const [params] = useSearchParams()
-  const [locale, setLocale] = useState(() => localStorage.getItem('serva-locale') === 'ar' ? 'ar' : 'en')
-  const [theme, setTheme] = useState(() => localStorage.getItem('serva-theme-v2') || 'light')
-  const ar = locale === 'ar'
-  const t = COPY[locale] || COPY.en
-  const requestedAdminPath = location.state?.from?.pathname || params.get('returnTo')
-  const isAdminRoute = requestedAdminPath === '/admin' || requestedAdminPath?.startsWith('/admin/')
-  const adminReturnTo = isAdminRoute && requestedAdminPath !== '/admin/login' ? requestedAdminPath : '/admin'
+  const preferences = useAuthPreferences()
+  const { state, search } = useLocation()
+  const t = COPY[preferences.locale] || COPY.en
+  const requested = requestedPath(state, search)
 
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.lang = locale
-    document.documentElement.dir = ar ? 'rtl' : 'ltr'
-    localStorage.setItem('serva-theme-v2', theme)
-    localStorage.setItem('serva-locale', locale)
-  }, [theme, locale, ar])
+  // The backend-verified role decides; signing in on this page grants nothing by itself.
+  if (isAdminUser(user)) return <Navigate to={destinationFor(user, requested)} replace />
 
+  const safe = safeReturnPath(requested)
+  const adminReturn = safe && isAdminPath(safe) ? safe : null
+  const selfUrl = authPageUrl('/admin/login', adminReturn)
+  const shell = { preferences, variant: 'admin', image: entrance, imageAlt: t.alt, eyebrow: t.eyebrow }
 
-  useEffect(() => {
-    if (String(user?.role).toLowerCase() === 'admin') navigate(adminReturnTo, { replace: true })
-  }, [user, navigate, adminReturnTo])
-
-  function toggleLocale() {
-    const next = ar ? 'en' : 'ar'
-    setLocale(next)
-    localStorage.setItem('serva-locale', next)
-    document.documentElement.lang = next
-    document.documentElement.dir = next === 'ar' ? 'rtl' : 'ltr'
-    window.dispatchEvent(new Event('serva-locale-change'))
+  if (profileError) {
+    return (
+      <AuthShell {...shell} title={t.errorTitle}>
+        <AuthStatus kind="error" message={t.errorHelp} detail={profileError} actions={<>
+          <button className="auth-button auth-button--primary" type="button" onClick={retryProfile}>{t.retry}</button>
+          <button className="auth-button auth-button--secondary" type="button" onClick={logout}>{t.signOut}</button>
+        </>} />
+      </AuthShell>
+    )
   }
 
-  if (profileError) return <AdminSession error={profileError} onRetry={retryProfile} onSignOut={logout} />
-  if (loading) return <AdminSession />
-  if (String(user?.role).toLowerCase() === 'admin') return <Navigate to={adminReturnTo} replace />
+  if (loading) {
+    return (
+      <AuthShell {...shell} title={t.verifyingTitle}>
+        <AuthStatus message={t.verifying} />
+      </AuthShell>
+    )
+  }
 
-  return <main className="club-operations admin-login-page" dir={ar ? 'rtl' : 'ltr'} lang={locale}>
-    <header className="admin-login-bar">
-      <Link to="/" className="admin-login-brand"><img src={logo} alt="" /><span dir="ltr">40 LOVE</span></Link>
-      <div className="admin-login-controls">
-        <button type="button" lang={ar ? 'en' : 'ar'} onClick={toggleLocale}>{t.language}</button>
-        <button type="button" aria-label={t.theme} onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}><Icon name={theme === 'dark' ? 'sun' : 'moon'} /></button>
-      </div>
-    </header>
-    <div className="admin-login-spread"><section className="admin-login-card" aria-labelledby="admin-login-title">
-      <h1 id="admin-login-title">{t.title}</h1><p>{t.help}</p>
-          {user ? (
-            <div className="admin-login-error" role="alert">
-              <p>{t.denied}</p>
-              <button className="admin-button" type="button" onClick={logout}>{t.signOut}</button>
-            </div>
-          ) : (
-            <>
-              {params.get('unauthorized') && <div className="admin-login-error" role="alert">{t.denied}</div>}
-              <SignIn
-                routing="hash"
-                withSignUp={false}
-                transferable={false}
-                fallbackRedirectUrl="/admin/login"
-                forceRedirectUrl={`/admin/login?returnTo=${encodeURIComponent(adminReturnTo)}`}
-                appearance={clerkAppearance(theme, 'admin')}
-              />
-            </>
-          )}
+  if (user) {
+    return (
+      <AuthShell {...shell} title={t.deniedTitle}>
+        <AuthStatus kind="denied" message={t.denied} actions={<>
+          <Link className="auth-button auth-button--primary" to="/">{t.memberArea}</Link>
+          <button className="auth-button auth-button--secondary" type="button" onClick={logout}>{t.signOut}</button>
+        </>} />
+      </AuthShell>
+    )
+  }
 
-      <Link className="admin-login-home" to="/">{t.home}</Link>
-    </section>
-    <figure><img src={entrance} alt={ar ? 'مدخل نادي 40 LOVE عند الغروب' : 'The entrance to 40 LOVE at dusk'} /></figure></div>
-    <footer className="admin-footer"><span>40 LOVE Padel Club &amp; Cafe</span><div><Link to="/terms-of-service">{ar ? 'شروط الخدمة' : 'Terms of Service'}</Link><Link to="/privacy-policy">{ar ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link></div></footer>
-  </main>
+  const unauthorized = new URLSearchParams(search).has('unauthorized')
+  return (
+    <AuthShell {...shell} title={t.title} intro={t.help}>
+      {unauthorized && (
+        <div className="auth-notice">
+          <AuthStatus kind="denied" message={t.denied} />
+        </div>
+      )}
+      <SignIn
+        routing="hash"
+        withSignUp={false}
+        transferable={false}
+        forceRedirectUrl={selfUrl}
+        fallbackRedirectUrl={selfUrl}
+        appearance={clerkAppearance(preferences.theme, 'admin')}
+      />
+    </AuthShell>
+  )
 }

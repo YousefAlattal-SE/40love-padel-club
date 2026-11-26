@@ -94,8 +94,9 @@ class MatchReservation(
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     var paymentStatus: MatchPaymentStatus = MatchPaymentStatus.unpaid,
 
+    // Refreshed only when an unpaid seat is re-confirmed (security item 19.2); a paid seat keeps it.
     @Column(name = "price_snapshot")
-    val priceSnapshot: BigDecimal = BigDecimal.ZERO,
+    var priceSnapshot: BigDecimal = BigDecimal.ZERO,
 
     @Column(name = "paid_at")
     var paidAt: Instant? = null,
@@ -108,6 +109,9 @@ class MatchReservation(
 
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "lifecycle_id", nullable = false)
+    var lifecycleId: java.util.UUID = java.util.UUID.randomUUID(),
+
 )
 
 // ─── Waitlist entry entity ─────────────────────────────────────────────────────
@@ -131,6 +135,9 @@ class MatchWaitlistEntry(
     @Column(name = "offered_at")
     var offeredAt: Instant? = null,
 
+    @Column(name = "offer_id")
+    var offerId: java.util.UUID? = null,
+
     @Column(name = "offer_expires_at")
     var offerExpiresAt: Instant? = null,
 
@@ -139,22 +146,14 @@ class MatchWaitlistEntry(
 
     @Column(name = "updated_at")
     var updatedAt: Instant = Instant.now(),
+    @Column(name = "lifecycle_id", nullable = false)
+    var lifecycleId: java.util.UUID = java.util.UUID.randomUUID(),
+
 )
 
 // ─── Repositories ──────────────────────────────────────────────────────────────
 
 interface MatchRepository : JpaRepository<Match, Long> {
-    @Query("SELECT m FROM Match m WHERE m.sport = 'padel' AND m.legacySport IS NULL AND m.status IN :statuses ORDER BY m.startsAt ASC")
-    fun findByStatusIn(@Param("statuses") statuses: List<MatchStatus>): List<Match>
-
-    // Keep enum values as typed parameters: string/enum literals make Hibernate cast to
-    // the Java enum type name (MatchStatus), which does not match PostgreSQL match_status.
-    @Query("SELECT m FROM Match m WHERE m.sport = 'padel' AND m.legacySport IS NULL AND m.status = :status AND m.startsAt > :from ORDER BY m.startsAt ASC")
-    fun findUpcomingPublished(
-        @Param("status") status: MatchStatus,
-        @Param("from") from: Instant,
-    ): List<Match>
-
     /** Count published matches that overlap the given time range on the given court. */
     @Query("""
         SELECT COUNT(m) FROM Match m
@@ -181,6 +180,9 @@ interface MatchRepository : JpaRepository<Match, Long> {
 }
 
 interface MatchReservationRepository : JpaRepository<MatchReservation, Long> {
+    @Query("select r.matchId from MatchReservation r where r.id = :id")
+    fun matchIdForReservation(@Param("id") id: Long): Long?
+
     fun findByUserId(userId: Long): List<MatchReservation>
     fun findByMatchIdAndUserId(matchId: Long, userId: Long): MatchReservation?
 
@@ -195,13 +197,14 @@ interface MatchReservationRepository : JpaRepository<MatchReservation, Long> {
 
 interface MatchWaitlistRepository : JpaRepository<MatchWaitlistEntry, Long> {
     fun findByMatchId(matchId: Long): List<MatchWaitlistEntry>
+    fun countByMatchIdAndStatusIn(matchId: Long, statuses: List<WaitlistStatus>): Int
     fun findByUserId(userId: Long): List<MatchWaitlistEntry>
     fun findByMatchIdAndUserId(matchId: Long, userId: Long): MatchWaitlistEntry?
 
     @Query("""
         SELECT w FROM MatchWaitlistEntry w
         WHERE w.matchId = :matchId AND w.status = :status
-        ORDER BY w.joinedAt ASC
+        ORDER BY w.joinedAt ASC, w.id ASC
     """)
     fun findFirstWaiting(
         @Param("matchId") matchId: Long,
@@ -209,14 +212,14 @@ interface MatchWaitlistRepository : JpaRepository<MatchWaitlistEntry, Long> {
     ): List<MatchWaitlistEntry>
 
     @Query("""
-        SELECT w FROM MatchWaitlistEntry w
-        WHERE w.status = :status AND w.offerExpiresAt < :now
+        SELECT DISTINCT w.matchId FROM MatchWaitlistEntry w
+        WHERE w.status = :status AND (w.offerExpiresAt IS NULL OR w.offerExpiresAt <= :now)
           AND EXISTS (SELECT m.id FROM Match m WHERE m.id = w.matchId AND m.sport = 'padel' AND m.legacySport IS NULL)
     """)
-    fun findExpiredOffers(
+    fun expiredMatchIds(
         @Param("now") now: Instant,
         @Param("status") status: WaitlistStatus,
-    ): List<MatchWaitlistEntry>
+    ): List<Long>
 
     fun findByMatchIdAndStatus(matchId: Long, status: WaitlistStatus): List<MatchWaitlistEntry>
 }

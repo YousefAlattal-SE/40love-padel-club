@@ -1,3 +1,4 @@
+import PageControls from '../components/PageControls'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { clubCourtName } from '../format'
@@ -252,6 +253,7 @@ export default function MatchmakingPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [locale, setLocale] = useState(() => document.documentElement.lang === 'ar' || localStorage.getItem('serva-locale') === 'ar' ? 'ar' : 'en')
+  const [page, setPage] = useState(0)
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -281,7 +283,7 @@ export default function MatchmakingPage() {
   useEffect(() => {
     const controller = new AbortController()
     const { signal } = controller
-    const params = new URLSearchParams()
+    const params = new URLSearchParams({ page })
     if (sportFilter) params.set('sport', sportFilter)
     if (skillFilter) params.set('skillLevel', skillFilter)
     // A changed filter starts a separate result set.
@@ -292,7 +294,7 @@ export default function MatchmakingPage() {
       .catch(err => { if (!signal.aborted) setError(errorMessage(err)) })
       .finally(() => { if (!signal.aborted) setLoading(false) })
     return () => controller.abort()
-  }, [sportFilter, skillFilter, refresh])
+  }, [sportFilter, skillFilter, refresh, page])
 
   function handleJoinClick(match) {
     if (!user) {
@@ -339,14 +341,14 @@ export default function MatchmakingPage() {
         {/* Filters */}
         <div className="mm-filters">
           <label>{t.sport}
-            <select value={sportFilter} onChange={e => setSportFilter(e.target.value)}>
+            <select value={sportFilter} onChange={e => { setPage(0); setSportFilter(e.target.value) }}>
               <option value="">{locale === 'ar' ? 'كل الرياضات' : 'All sports'}</option>
               <option value="padel">{sportLabel('padel', locale)}</option>
             </select>
           </label>
           <label>
             {t.filter}
-            <select value={skillFilter} onChange={e => setSkillFilter(e.target.value)}>
+            <select value={skillFilter} onChange={e => { setPage(0); setSkillFilter(e.target.value) }}>
               <option value="">{t.allLevels}</option>
               <option value="open">{t.openLevel}</option>
               <option value="beginner">{t.beginner}</option>
@@ -355,7 +357,7 @@ export default function MatchmakingPage() {
             </select>
           </label>
           {(sportFilter || skillFilter) && (
-            <button className="mm-filter-reset" type="button" onClick={() => { setSportFilter(''); setSkillFilter('') }}>
+            <button className="mm-filter-reset" type="button" onClick={() => { setPage(0); setSportFilter(''); setSkillFilter('') }}>
               {t.clearFilters}
             </button>
           )}
@@ -384,6 +386,7 @@ export default function MatchmakingPage() {
               <p>{sportFilter || skillFilter ? t.adjust : t.checkBack}</p>
             </div>
           )}
+          {!error && <PageControls page={page} count={matches.length} onPage={setPage} ar={locale === 'ar'} loading={loading} />}
           {!loading && !error && matches.map(match => (
             <MatchCard key={match.id} match={match} onJoin={handleJoinClick} locale={locale} t={t} />
           ))}

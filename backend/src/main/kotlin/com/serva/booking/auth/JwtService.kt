@@ -21,17 +21,32 @@ import javax.crypto.SecretKey
 class JwtService(
     @Value($$"${app.jwt.secret}") secret: String,
     @Value($$"${app.jwt.expiration-minutes}") private val expirationMinutes: Long,
-    @Value($$"${spring.profiles.active:local}") activeProfiles: String = "local",
+    @Value($$"${spring.profiles.active:}") activeProfiles: String = "local",
     @Value($$"${user.home}") userHome: String = System.getProperty("user.home"),
+    // Kotlin default stays true so existing direct constructions (tests) keep legacy behaviour;
+    // Spring always injects the property, whose default is false.
+    @Value($$"${app.auth.legacy-jwt-enabled:false}") private val legacyEnabled: Boolean = true,
 ) {
-    // The secret must be at least 32 characters for HS256
-    private val key: SecretKey = Keys.hmacShaKeyFor(
-        JwtSecretResolver.resolve(secret, activeProfiles, Path.of(userHome)).toByteArray(Charsets.UTF_8),
-    )
+    // The secret must be at least 32 characters for HS256. When legacy authentication is
+    // disabled no JWT_SECRET is required: a random in-memory key is used and never issued.
+    private val key: SecretKey = if (legacyEnabled) {
+        Keys.hmacShaKeyFor(
+            JwtSecretResolver.resolve(secret, activeProfiles, Path.of(userHome)).toByteArray(Charsets.UTF_8),
+        )
+    } else {
+        Jwts.SIG.HS256.key().build()
+    }
+
+    init {
+        require(expirationMinutes in 1..60) { "Legacy token lifetime must be between 1 and 60 minutes" }
+    }
 
     fun generate(user: User): String {
+        check(legacyEnabled) { "Legacy JWT authentication is disabled" }
         val now = Instant.now()
         return Jwts.builder()
+            .issuer("fortylove-legacy")
+            .audience().add("fortylove-api").and()
             .subject(user.id.toString())
             .claim("email", user.email)
             .claim("role", user.role.name)
@@ -42,8 +57,14 @@ class JwtService(
     }
 
     /** Returns the user inside a valid token, or null if the token is invalid or expired. */
-    fun parse(token: String): AuthUser? = try {
-        val claims = Jwts.parser().verifyWith(key).build().parseSignedClaims(token).payload
+    fun parse(token: String): AuthUser? = if (!legacyEnabled) null else try {
+        val claims = Jwts.parser().verifyWith(key)
+            .requireIssuer("fortylove-legacy").requireAudience("fortylove-api")
+            .build().parseSignedClaims(token).payload
+        val issued = requireNotNull(claims.issuedAt).toInstant()
+        val expires = requireNotNull(claims.expiration).toInstant()
+        require(!issued.isAfter(Instant.now()) && expires.isAfter(issued) &&
+            !expires.isAfter(issued.plus(expirationMinutes, ChronoUnit.MINUTES)))
         AuthUser(
             id = claims.subject.toLong(),
             email = claims["email"] as String,

@@ -2,6 +2,7 @@ package com.serva.booking.matchmaking
 
 import com.serva.booking.auth.AuthUser
 import com.serva.booking.court.Sport
+import com.serva.booking.config.ApiPage
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.web.server.ResponseStatusException
@@ -53,10 +54,11 @@ class MatchController(private val matchService: MatchService) {
     fun list(
         @RequestParam(required = false) sport: String?,
         @RequestParam(required = false) skillLevel: String?,
+        page: ApiPage,
     ): List<MatchResponse> {
-        val s = parseSportFilter(sport)
+        parseSportFilter(sport)
         val sk = skillLevel?.trim()?.let { runCatching { SkillLevel.valueOf(it.lowercase()) }.getOrNull() }
-        return matchService.listPublished(s, sk)
+        return matchService.listMatches(page, MatchStatus.published, sk, upcomingOnly = true)
     }
 
     /** Public: single match detail. */
@@ -80,8 +82,9 @@ class MatchController(private val matchService: MatchService) {
     @PostMapping("/reservations/{id}/cancel")
     fun cancelReservation(
         @PathVariable id: Long,
+        @RequestBody req: LifecycleActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): MatchReservationResponse = matchService.cancelReservation(user.id, id)
+    ): MatchReservationResponse = matchService.cancelReservation(user.id, id, req.lifecycleId)
 
     /** Member: join waiting list. */
     @PostMapping("/{id}/waitlist")
@@ -95,22 +98,25 @@ class MatchController(private val matchService: MatchService) {
     @DeleteMapping("/{id}/waitlist")
     fun leaveWaitlist(
         @PathVariable id: Long,
+        @RequestBody req: LifecycleActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): WaitlistEntryResponse = matchService.leaveWaitlist(user.id, id)
+    ): WaitlistEntryResponse = matchService.leaveWaitlist(user.id, id, req.lifecycleId)
 
     /** Member: accept waiting-list offer. */
     @PostMapping("/{id}/waitlist/accept")
     fun acceptOffer(
         @PathVariable id: Long,
+        @RequestBody request: OfferActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): MatchReservationResponse = matchService.acceptWaitlistOffer(user.id, id)
+    ): MatchReservationResponse = matchService.acceptWaitlistOffer(user.id, id, request.offerId).getOrThrow()
 
     /** Member: decline waiting-list offer. */
     @PostMapping("/{id}/waitlist/decline")
     fun declineOffer(
         @PathVariable id: Long,
+        @RequestBody request: OfferActionRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): WaitlistEntryResponse = matchService.declineWaitlistOffer(user.id, id)
+    ): WaitlistEntryResponse = matchService.declineWaitlistOffer(user.id, id, request.offerId)
 
     /** Member: own waitlist entries. */
     @GetMapping("/my-waitlist")
@@ -122,6 +128,7 @@ class MatchController(private val matchService: MatchService) {
 
 @RestController
 @RequestMapping("/api/admin/matchmaking")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
 class AdminMatchController(private val matchService: MatchService) {
 
     /** Admin: list all matches. */
@@ -130,11 +137,12 @@ class AdminMatchController(private val matchService: MatchService) {
         @RequestParam(required = false) sport: String?,
         @RequestParam(required = false) status: String?,
         @RequestParam(required = false) skillLevel: String?,
+        page: ApiPage,
     ): List<MatchResponse> {
-        val s = parseSportFilter(sport)
+        parseSportFilter(sport)
         val st = status?.trim()?.let { runCatching { MatchStatus.valueOf(it.lowercase()) }.getOrNull() }
         val sk = skillLevel?.trim()?.let { runCatching { SkillLevel.valueOf(it.lowercase()) }.getOrNull() }
-        return matchService.listAll(s, st, sk)
+        return matchService.listMatches(page, st, sk, upcomingOnly = false)
     }
 
     /** Admin: create a match. */
@@ -184,5 +192,5 @@ class AdminMatchController(private val matchService: MatchService) {
         @PathVariable id: Long,
         @RequestBody req: AdminMarkPaidRequest,
         @AuthenticationPrincipal user: AuthUser,
-    ): AdminReservationResponse = matchService.markReservationPaid(user.id, id, req.paid)
+    ): AdminReservationResponse = matchService.markReservationPaid(user.id, id, req.paid, req.lifecycleId)
 }

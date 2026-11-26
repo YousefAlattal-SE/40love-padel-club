@@ -35,6 +35,21 @@ class ApiExceptionHandler {
     fun handleEmailUsed(e: EmailAlreadyUsedException) =
         error(HttpStatus.CONFLICT, e.message ?: "Conflict")
 
+    @ExceptionHandler(org.postgresql.util.PSQLException::class)
+    fun handleDatabaseError(e: org.postgresql.util.PSQLException): ResponseEntity<Map<String, Any>> {
+        val constraint = e.serverErrorMessage?.constraint
+        return when {
+            e.sqlState == "23P01" && constraint in setOf(
+                "court_occupancy_no_overlap", "bookings_court_id_tstzrange_excl", "matches_court_id_tstzrange_excl"
+            ) -> handleSlotTaken(SlotTakenException())
+            e.sqlState == "23514" && constraint == "court_unavailable" ->
+                error(HttpStatus.BAD_REQUEST, "This court is currently unavailable")
+            e.sqlState == "23514" && constraint == "completed_match_interval" ->
+                error(HttpStatus.BAD_REQUEST, "Complete the match without changing its scheduled court or time")
+            else -> throw e
+        }
+    }
+
     @ExceptionHandler(SlotTakenException::class)
     fun handleSlotTaken(e: SlotTakenException) =
         error(HttpStatus.CONFLICT, e.message ?: "Conflict")

@@ -1,3 +1,4 @@
+import PageControls from '../components/PageControls'
 import Icon from './AdminIcon'
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
@@ -77,7 +78,7 @@ export function AdminOverviewPage() {
 
   useEffect(() => {
     let live = true
-    Promise.all([api.get('/admin/overview'), api.get('/admin/bookings')])
+    Promise.all([api.get('/admin/overview'), api.get('/admin/bookings', { params: { size: 6 } })])
         .then(([summary, rows]) => { if (live) { setOverview(summary.data); setBookings(rows.data); setError('') } })
         .catch((err) => { if (live) setError(errorMessage(err)) })
         .finally(() => { if (live) setLoading(false) })
@@ -93,10 +94,8 @@ export function AdminOverviewPage() {
     { key: 'revenueMonth', value: money(overview.revenueThisMonth, locale), hint: '' },
   ] : []
 
-  const statusCounts = useMemo(() => bookings.reduce((counts, booking) => {
-    if (Object.prototype.hasOwnProperty.call(counts, booking.status)) counts[booking.status] += 1
-    return counts
-  }, { confirmed: 0, cancelled: 0, no_show: 0 }), [bookings])
+  const statusCounts = { confirmed: 0, cancelled: 0, no_show: 0, ...overview?.statusCounts }
+  const totalBookings = Object.values(statusCounts).reduce((sum, value) => sum + value, 0)
   const statusBreakdown = [
     { key: 'confirmed', count: statusCounts.confirmed },
     { key: 'cancelled', count: statusCounts.cancelled },
@@ -124,11 +123,11 @@ export function AdminOverviewPage() {
           </section>
         <div className="admin-overview-grid">
           <section className="admin-panel admin-status-panel" aria-labelledby="admin-booking-status-title">
-            <div className="admin-panel-heading"><div><h2 id="admin-booking-status-title">{t.bookingStatusMix}</h2></div><span className="admin-status-total"><strong>{bookings.length}</strong><small>{t.totalBookings}</small></span></div>
+            <div className="admin-panel-heading"><div><h2 id="admin-booking-status-title">{t.bookingStatusMix}</h2></div><span className="admin-status-total"><strong>{totalBookings}</strong><small>{t.totalBookings}</small></span></div>
             <p className="admin-status-caption">{t.allPadelBookings}</p>
-            {bookings.length ? <>
+            {totalBookings ? <>
               <div className="admin-status-bar" aria-hidden="true">
-                {statusBreakdown.map((item) => <span key={item.key} className={`status-${item.status || item.key}`} style={{ width: `${(item.count / bookings.length) * 100}%` }} />)}
+                {statusBreakdown.map((item) => <span key={item.key} className={`status-${item.status || item.key}`} style={{ width: `${(item.count / totalBookings) * 100}%` }} />)}
               </div>
               <ul className="admin-status-legend">
                 {statusBreakdown.map((item) => <li key={item.key}>
@@ -162,6 +161,7 @@ export function AdminBookingsPage() {
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [notice, setNotice] = useState(null)
@@ -171,9 +171,9 @@ export function AdminBookingsPage() {
 
   useEffect(() => {
     let live = true
-    api.get('/admin/bookings').then(({ data }) => { if (live) { setBookings(data); setError('') } }).catch((err) => { if (live) setError(errorMessage(err)) }).finally(() => { if (live) setLoading(false) })
+    api.post('/admin/bookings', { search }, { params: { page, filter } }).then(({ data }) => { if (live) { setBookings(data); setError('') } }).catch((err) => { if (live) setError(errorMessage(err)) }).finally(() => { if (live) setLoading(false) })
     return () => { live = false }
-  }, [reload])
+  }, [reload, page, search, filter])
 
   const filtered = useMemo(() => bookings.filter((b) => {
     const q = search.trim().toLowerCase()
@@ -208,8 +208,9 @@ export function AdminBookingsPage() {
     <PageHeading title={t.manageBookings} description={t.bookingsSubtitle} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <section className="admin-panel admin-list-panel">
-      <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchBookings} aria-label={t.searchBookings} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
-      <div className="admin-filter-row" data-lenis-prevent>{filters.map((item) => <button key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
+      <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input maxLength={256} value={search} onChange={(e) => { setPage(0); setSearch(e.target.value) }} placeholder={t.searchBookings} aria-label={t.searchBookings} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
+      <div className="admin-filter-row" data-lenis-prevent>{filters.map((item) => <button key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => { setPage(0); setFilter(item.key) }}>{item.label}</button>)}</div>
+      <PageControls page={page} count={bookings.length} onPage={setPage} ar={ar} loading={loading} />
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? t.noBookings : null}>
         <div className="admin-table-scroll" role="region" aria-label={ar ? 'جدول السجلات' : 'Records table'} tabIndex={0} data-lenis-prevent><table className="admin-table admin-bookings-table"><thead><tr><th>{t.booking}</th><th>{t.member}</th><th>{t.court}</th><th>{t.session}</th><th>{t.amount}</th><th>{t.status}</th><th>{t.payment}</th><th>{t.actions}</th></tr></thead><tbody>
         {filtered.map((booking) => <tr key={booking.id}>
@@ -342,15 +343,16 @@ export function AdminCustomersPage() {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [reload, setReload] = useState(0)
   const refresh = () => { setLoading(true); setReload((v) => v + 1) }
   useEffect(() => {
     let live = true
-    api.get('/admin/customers').then(({ data }) => { if (live) { setCustomers(data); setError('') } }).catch((err) => { if (live) setError(errorMessage(err)) }).finally(() => { if (live) setLoading(false) })
+    api.post('/admin/customers', { search }, { params: { page, filter } }).then(({ data }) => { if (live) { setCustomers(data); setError('') } }).catch((err) => { if (live) setError(errorMessage(err)) }).finally(() => { if (live) setLoading(false) })
     return () => { live = false }
-  }, [reload])
+  }, [reload, page, search, filter])
   const filtered = useMemo(() => customers.filter((c) => {
     const matchesSearch = [c.fullName, c.email, c.phone, String(c.id)].some((x) => String(x || '').toLowerCase().includes(search.trim().toLowerCase()))
     const matchesFilter = filter === 'all' || (filter === 'active' ? c.active : !c.active)
@@ -359,8 +361,9 @@ export function AdminCustomersPage() {
   return <>
     <PageHeading title={t.customersTitle} description={t.customersSub} action={<span className="admin-count-chip">{filtered.length} {t.countLabel}</span>} />
     <section className="admin-panel admin-list-panel">
-      <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.searchCustomers} aria-label={t.searchCustomers} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
-      <div className="admin-filter-row" data-lenis-prevent>{[{ key: 'all', label: t.all }, { key: 'active', label: t.active }, { key: 'inactive', label: t.inactive }].map((item) => <button type="button" key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => setFilter(item.key)}>{item.label}</button>)}</div>
+      <div className="admin-toolbar"><div className="admin-search"><Icon name="search" size={17} /><input maxLength={256} value={search} onChange={(e) => { setPage(0); setSearch(e.target.value) }} placeholder={t.searchCustomers} aria-label={t.searchCustomers} /></div><button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{t.refresh}</button></div>
+      <div className="admin-filter-row" data-lenis-prevent>{[{ key: 'all', label: t.all }, { key: 'active', label: t.active }, { key: 'inactive', label: t.inactive }].map((item) => <button type="button" key={item.key} aria-pressed={filter === item.key} className={filter === item.key ? 'active' : ''} onClick={() => { setPage(0); setFilter(item.key) }}>{item.label}</button>)}</div>
+      <PageControls page={page} count={customers.length} onPage={setPage} ar={ar} loading={loading} />
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? t.noCustomers : null}>
         <div className="admin-table-scroll" role="region" aria-label={ar ? 'جدول السجلات' : 'Records table'} tabIndex={0} data-lenis-prevent><table className="admin-table"><thead><tr><th>{t.name}</th><th>{t.contact}</th><th>{t.bookings}</th><th>{t.bookingValue}</th><th>{t.joined}</th><th>{t.account}</th></tr></thead><tbody>
         {filtered.map((customer) => <tr key={customer.id}><td><div className="admin-customer-cell"><span>{customer.fullName.trim().slice(0, 1).toUpperCase()}</span><strong>{customer.fullName}</strong></div><small className="admin-id">#{customer.id}</small></td><td><strong>{customer.email}</strong>{customer.phone ? <PhoneContact phone={customer.phone} /> : <small>{t.emptyValue}</small>}</td><td><strong>{customer.bookingCount}</strong><small>{ar ? 'حجوزات غير ملغاة' : 'non-cancelled bookings'}</small></td><td className="admin-money-cell"><strong>{money(customer.bookingValue, locale)}</strong></td><td>{dateOnly(customer.createdAt, locale)}</td><td><Badge tone={customer.active ? 'success' : 'danger'}>{customer.active ? t.active : t.inactive}</Badge></td></tr>)}
@@ -376,6 +379,7 @@ export function AdminContactMessagesPage() {
   const [messages, setMessages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('all')
   const [busyId, setBusyId] = useState(null)
@@ -385,12 +389,12 @@ export function AdminContactMessagesPage() {
 
   useEffect(() => {
     let live = true
-    api.get('/admin/contact-messages')
+    api.post('/admin/contact-messages', { search }, { params: { page, filter } })
         .then(({ data }) => { if (live) { setMessages(data); setError('') } })
         .catch((err) => { if (live) setError(errorMessage(err)) })
         .finally(() => { if (live) setLoading(false) })
     return () => { live = false }
-  }, [reload])
+  }, [reload, page, search, filter])
 
   const labels = ar
       ? { title: 'رسائل التواصل', subtitle: 'اقرأ الملاحظات والاستفسارات المرسلة من نموذج التواصل في الموقع.', eyebrow: 'مساحة الإدارة / 05', search: 'ابحث بالاسم أو الهاتف أو نص الرسالة…', all: 'الكل', new: 'جديدة', read: 'مقروءة', replied: 'تم الرد', archived: 'مؤرشفة', noMessages: 'لا توجد رسائل تطابق البحث.', name: 'الاسم', phone: 'الهاتف', sport: 'الرياضة', preferred: 'الوقت المفضل', message: 'الرسالة', received: 'تاريخ الإرسال', status: 'الحالة', markRead: 'تحديد كمقروءة', markReplied: 'تم الرد', archive: 'أرشفة', updateError: 'تعذر تحديث حالة الرسالة.', updated: 'تم تحديث حالة الرسالة.', count: 'رسائل' }
@@ -425,10 +429,11 @@ export function AdminContactMessagesPage() {
     <Notice type={notice?.type} onClose={() => setNotice(null)}>{notice?.text}</Notice>
     <section className="admin-panel admin-list-panel admin-contact-messages-panel">
       <div className="admin-toolbar">
-        <div className="admin-search"><Icon name="search" size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder={labels.search} aria-label={labels.search} /></div>
+        <div className="admin-search"><Icon name="search" size={17} /><input maxLength={256} value={search} onChange={(event) => { setPage(0); setSearch(event.target.value) }} placeholder={labels.search} aria-label={labels.search} /></div>
         <button className="admin-button secondary" onClick={refresh}><Icon name="refresh" size={15} />{ar ? 'تحديث' : 'Refresh'}</button>
       </div>
-      <div className="admin-filter-row" data-lenis-prevent>{['all', 'new', 'read', 'replied', 'archived'].map((status) => <button type="button" key={status} aria-pressed={filter === status} className={filter === status ? 'active' : ''} onClick={() => setFilter(status)}>{statusLabel(status)}</button>)}</div>
+      <div className="admin-filter-row" data-lenis-prevent>{['all', 'new', 'read', 'replied', 'archived'].map((status) => <button type="button" key={status} aria-pressed={filter === status} className={filter === status ? 'active' : ''} onClick={() => { setPage(0); setFilter(status) }}>{statusLabel(status)}</button>)}</div>
+      <PageControls page={page} count={messages.length} onPage={setPage} ar={ar} loading={loading} />
       <StatePanel loading={loading} error={error} retry={refresh} empty={filtered.length === 0 ? labels.noMessages : null}>
         <div className="admin-contact-message-list">
           {filtered.map((message) => <article key={message.id} className={`admin-contact-message-card ${message.status === 'new' ? 'is-new' : ''}`}>

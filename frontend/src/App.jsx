@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, Outlet, useOutletContext, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
+import { isAdminUser } from './authRouting'
 import { AuthProvider } from './AuthContext'
 import AuthBootstrapNotice from './AuthBootstrapNotice'
 import Layout from './Layout'
@@ -36,7 +37,7 @@ function AdminProtected() {
   if (loading) return <AdminSession />
   if (profileError) return <AdminSession error={profileError} onRetry={retryProfile} onSignOut={logout} />
   if (!user) return <Navigate to="/admin/login" state={{ from: location }} replace />
-  if (String(user.role).toLowerCase() !== 'admin') return <Navigate to="/admin/login?unauthorized=1" state={{ from: location }} replace />
+  if (!isAdminUser(user)) return <Navigate to="/admin/login?unauthorized=1" state={{ from: location }} replace />
   return <AdminLayout />
 }
 
@@ -48,11 +49,13 @@ export default function App() {
           <div className="app-shell">
             <div className="app-route-content">
               <Routes>
+                {/* Authentication screens use their own frame so no member page shows while a role is verified. */}
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+
                 {/* Public page hosted by the Outlet-based layout (do not pass it as ignored children). */}
                 <Route element={<Layout />}>
                   <Route index element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
                   <Route path="/terms-of-service" element={<ClubLegal kind="terms" />} />
                   <Route path="/privacy-policy" element={<ClubLegal kind="privacy" />} />
                   <Route path="/courts" element={<ClubPage />} />

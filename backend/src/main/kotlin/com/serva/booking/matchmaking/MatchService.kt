@@ -1,6 +1,8 @@
 package com.serva.booking.matchmaking
 
+import com.serva.booking.config.ApiPage
 import com.serva.booking.BookingRuleException
+import com.serva.booking.booking.SlotTakenException
 import com.serva.booking.booking.BookingRepository
 import com.serva.booking.booking.BookingStatus
 import com.serva.booking.court.CourtRepository
@@ -34,35 +36,45 @@ class MatchService(
     // ─── Public / Member: list and view matches ────────────────────────────────
 
     @Transactional(readOnly = true)
-    fun listPublished(sport: Sport? = null, skillLevel: SkillLevel? = null): List<MatchResponse> {
-        val matches = matchRepo.findUpcomingPublished(MatchStatus.published, Instant.now())
-        return matches
-            .filter { sport == null || it.sport == sport.name }
-            .filter { skillLevel == null || it.skillLevel == skillLevel }
-            .map { toMatchResponse(it) }
-    }
+    fun listMatches(page: ApiPage, status: MatchStatus?, skill: SkillLevel?, upcomingOnly: Boolean): List<MatchResponse> =
+        jdbc.query(
+            """
+            SELECT m.*,
+                (SELECT COUNT(*) FROM match_reservations r WHERE r.match_id=m.id AND r.status='confirmed') AS confirmed,
+                (SELECT COUNT(*) FROM match_waitlist w WHERE w.match_id=m.id AND w.status IN ('waiting','offered')) AS queued
+            FROM (
+                SELECT src.*, c.name AS court_name FROM matches src
+                JOIN courts c ON c.id=src.court_id AND c.legacy_sport IS NULL AND c.sport='padel'
+                WHERE src.sport='padel' AND src.legacy_sport IS NULL
+                  AND (? = '' OR status::text = ?) AND (? = '' OR skill_level::text = ?)
+                  AND (NOT ? OR starts_at > CURRENT_TIMESTAMP)
+                ORDER BY src.starts_at, src.id LIMIT ? OFFSET ?
+            ) m
+            ORDER BY m.starts_at, m.id
+            """.trimIndent(),
+            { rs, _ ->
+                fun time(column: String) = rs.getTimestamp(column).toInstant().atZone(zone).toOffsetDateTime().toString()
+                val confirmed = rs.getInt("confirmed")
+                val capacity = rs.getInt("max_players")
+                MatchResponse(
+                    id = rs.getLong("id"), sport = rs.getString("sport"), courtId = rs.getLong("court_id"),
+                    courtName = rs.getString("court_name"), startsAt = time("starts_at"), endsAt = time("ends_at"),
+                    maxPlayers = capacity, pricePerPlayer = rs.getBigDecimal("price_per_player"),
+                    skillLevel = SkillLevel.valueOf(rs.getString("skill_level")), description = rs.getString("description"),
+                    status = MatchStatus.valueOf(rs.getString("status")), confirmedCount = confirmed,
+                    availableSpots = (capacity - confirmed).coerceAtLeast(0), waitlistCount = rs.getInt("queued"),
+                    createdAt = time("created_at"),
+                )
+            },
+            status?.name.orEmpty(), status?.name.orEmpty(), skill?.name.orEmpty(), skill?.name.orEmpty(),
+            upcomingOnly, page.size, page.offset,
+        )
 
     @Transactional(readOnly = true)
     fun getPublicMatch(matchId: Long): MatchResponse {
         val match = requirePadelMatch(matchId)
         if (match.status != MatchStatus.published) throw MatchNotFoundException()
         return toMatchResponse(match)
-    }
-
-    // ─── Admin: list all matches ───────────────────────────────────────────────
-
-    @Transactional(readOnly = true)
-    fun listAll(
-        sport: Sport? = null,
-        status: MatchStatus? = null,
-        skillLevel: SkillLevel? = null,
-    ): List<MatchResponse> {
-        val statuses = if (status != null) listOf(status) else MatchStatus.entries
-        val matches = matchRepo.findByStatusIn(statuses)
-        return matches
-            .filter { sport == null || it.sport == sport.name }
-            .filter { skillLevel == null || it.skillLevel == skillLevel }
-            .map { toMatchResponse(it) }
     }
 
     // ─── Admin: create a match ─────────────────────────────────────────────────
@@ -108,7 +120,7 @@ class MatchService(
 
     @Transactional
     fun updateMatch(matchId: Long, req: UpdateMatchRequest): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
 
         // Cannot edit a cancelled or completed match
         if (match.status == MatchStatus.cancelled || match.status == MatchStatus.completed) {
@@ -131,6 +143,18 @@ class MatchService(
 
         // Validate new status transitions
         validateStatusTransition(match.status, newStatus)
+
+        // Completion closes participants and records the match as played, so it is only valid once
+        // the match has started (security item 6.1; club decision: no completion before start).
+        if (newStatus == MatchStatus.completed && match.startsAt.isAfter(Instant.now())) {
+            throw BookingRuleException("A match cannot be completed before it starts")
+        }
+
+        if (newStatus == MatchStatus.completed &&
+            (newCourtId != match.courtId || newStart != match.startsAt || newEnd != match.endsAt)
+        ) {
+            throw BookingRuleException("Complete the match without changing its scheduled court or time")
+        }
 
         // If publishing, check for conflicts with bookings and other matches
         if (newStatus == MatchStatus.published) {
@@ -161,7 +185,10 @@ class MatchService(
             updatedAt = Instant.now(),
         )
 
+        if (newStatus in setOf(MatchStatus.completed, MatchStatus.cancelled)) closeParticipants(matchId, newStatus)
+        val capacityIncreased = newMaxPlayers > match.maxPlayers
         val saved = matchRepo.saveAndFlush(updated)
+        if (capacityIncreased && saved.status == MatchStatus.published) offerSpotToNextOnWaitlist(matchId)
         return toMatchResponse(saved)
     }
 
@@ -169,7 +196,7 @@ class MatchService(
 
     @Transactional
     fun publishMatch(matchId: Long): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
         if (match.status != MatchStatus.draft) {
             throw BookingRuleException("Only draft matches can be published")
         }
@@ -185,29 +212,13 @@ class MatchService(
 
     @Transactional
     fun cancelMatch(matchId: Long): MatchResponse {
-        val match = requirePadelMatch(matchId)
+        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
         if (match.status == MatchStatus.cancelled) {
             throw BookingRuleException("Match is already cancelled")
         }
 
-        // Cancel all active reservations (preserve records for history)
-        val reservations = reservationRepo.findByMatchIdAndStatus(matchId, MatchReservationStatus.confirmed)
-        reservations.forEach {
-            it.status = MatchReservationStatus.cancelled
-            it.updatedAt = Instant.now()
-        }
-        reservationRepo.saveAll(reservations)
-
-        // Remove all waitlist entries
-        val waitlist = waitlistRepo.findByMatchId(matchId)
-        waitlist.forEach {
-            if (it.status == WaitlistStatus.waiting || it.status == WaitlistStatus.offered) {
-                it.status = WaitlistStatus.removed
-                it.updatedAt = Instant.now()
-            }
-        }
-        waitlistRepo.saveAll(waitlist)
-
+        validateStatusTransition(match.status, MatchStatus.cancelled)
+        closeParticipants(matchId, MatchStatus.cancelled)
         match.status = MatchStatus.cancelled
         match.updatedAt = Instant.now()
         return toMatchResponse(matchRepo.saveAndFlush(match))
@@ -223,7 +234,7 @@ class MatchService(
         if (match.status != MatchStatus.published) {
             throw BookingRuleException("This match is not open for reservations")
         }
-        if (match.startsAt.isBefore(Instant.now())) {
+        if (!match.startsAt.isAfter(Instant.now())) {
             throw BookingRuleException("This match has already started")
         }
 
@@ -233,9 +244,14 @@ class MatchService(
             throw AlreadyReservedException()
         }
 
-        // Count confirmed spots
+        // Count confirmed spots plus spots held by active waiting-list offers (security item 19.1):
+        // a freed spot being offered to the next member in the queue cannot be taken by a direct join.
+        // The joiner's own offer and expired offers do not hold a spot.
         val confirmedCount = reservationRepo.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)
-        if (confirmedCount >= match.maxPlayers) {
+        val now = Instant.now()
+        val heldByOffers = waitlistRepo.findByMatchIdAndStatus(matchId, WaitlistStatus.offered)
+            .count { it.userId != userId && it.offerExpiresAt?.isAfter(now) == true }
+        if (confirmedCount + heldByOffers >= match.maxPlayers) {
             throw MatchFullException()
         }
 
@@ -243,9 +259,8 @@ class MatchService(
             if (existing != null) {
                 // Re-joining after cancellation: update existing record
                 existing.status = MatchReservationStatus.confirmed
-                existing.paymentStatus = MatchPaymentStatus.unpaid
-                existing.paidAt = null
-                existing.paidBy = null
+                refreshUnpaidPrice(existing, match)
+                existing.lifecycleId = java.util.UUID.randomUUID()
                 existing.updatedAt = Instant.now()
                 reservationRepo.saveAndFlush(existing)
             } else {
@@ -261,6 +276,14 @@ class MatchService(
             throw AlreadyReservedException()
         }
 
+        waitlistRepo.findByMatchIdAndUserId(matchId, userId)?.let { entry ->
+            if (entry.status in setOf(WaitlistStatus.waiting, WaitlistStatus.offered)) {
+                entry.status = WaitlistStatus.accepted
+                entry.updatedAt = Instant.now()
+                waitlistRepo.saveAndFlush(entry)
+                offerSpotToNextOnWaitlist(matchId)
+            }
+        }
         val court = courtRepo.findById(match.courtId).orElseThrow()
         return toReservationResponse(reservation, match, court.name)
     }
@@ -281,18 +304,19 @@ class MatchService(
     // ─── Member: cancel own reservation ───────────────────────────────────────
 
     @Transactional
-    fun cancelReservation(userId: Long, reservationId: Long): MatchReservationResponse {
+    fun cancelReservation(userId: Long, reservationId: Long, lifecycleId: java.util.UUID): MatchReservationResponse {
+        val match = lockMatch(reservationRepo.matchIdForReservation(reservationId) ?: throw MatchReservationNotFoundException())
         val reservation = reservationRepo.findById(reservationId).orElseThrow { MatchReservationNotFoundException() }
 
         // Members can only cancel their own reservations
         if (reservation.userId != userId) throw MatchReservationNotFoundException()
+        requireLifecycle(reservation.lifecycleId, lifecycleId)
         if (reservation.status != MatchReservationStatus.confirmed) {
             throw BookingRuleException("This reservation is already ${reservation.status.name}")
         }
 
-        val match = requirePadelMatch(reservation.matchId)
-        if (match.status == MatchStatus.cancelled) {
-            throw BookingRuleException("This match has been cancelled")
+        if (match.status != MatchStatus.published) {
+            throw BookingRuleException("This match is not open for cancellation")
         }
 
         // Enforce 12-hour cancellation cutoff
@@ -316,11 +340,11 @@ class MatchService(
 
     @Transactional
     fun joinWaitlist(userId: Long, matchId: Long): WaitlistEntryResponse {
-        val match = requirePadelMatch(matchId)
+        val match = lockMatch(matchId)
         if (match.status != MatchStatus.published) {
             throw BookingRuleException("This match is not open for reservations")
         }
-        if (match.startsAt.isBefore(Instant.now())) {
+        if (!match.startsAt.isAfter(Instant.now())) {
             throw BookingRuleException("This match has already started")
         }
 
@@ -336,8 +360,9 @@ class MatchService(
         }
 
         val entry = try {
-            if (existing != null && existing.status in listOf(WaitlistStatus.declined, WaitlistStatus.expired, WaitlistStatus.removed)) {
+            if (existing != null && existing.status in listOf(WaitlistStatus.declined, WaitlistStatus.expired, WaitlistStatus.removed, WaitlistStatus.accepted)) {
                 // Re-join after decline/expiry
+                existing.lifecycleId = java.util.UUID.randomUUID()
                 existing.status = WaitlistStatus.waiting
                 existing.offeredAt = null
                 existing.offerExpiresAt = null
@@ -361,23 +386,23 @@ class MatchService(
     // ─── Member: leave waiting list ────────────────────────────────────────────
 
     @Transactional
-    fun leaveWaitlist(userId: Long, matchId: Long): WaitlistEntryResponse {
+    fun leaveWaitlist(userId: Long, matchId: Long, lifecycleId: java.util.UUID): WaitlistEntryResponse {
+        lockMatch(matchId)
         val entry = waitlistRepo.findByMatchIdAndUserId(matchId, userId)
             ?: throw BookingRuleException("You are not on the waiting list for this match")
 
-        if (entry.status !in listOf(WaitlistStatus.waiting, WaitlistStatus.offered)) {
+        requireLifecycle(entry.lifecycleId, lifecycleId)
+        if (entry.status == WaitlistStatus.offered) {
+            throw org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, "A spot was offered. Refresh to accept or decline the current offer.")
+        }
+        if (entry.status != WaitlistStatus.waiting) {
             throw BookingRuleException("You are not actively on the waiting list")
         }
 
-        val wasOffered = entry.status == WaitlistStatus.offered
         entry.status = WaitlistStatus.removed
         entry.updatedAt = Instant.now()
         waitlistRepo.saveAndFlush(entry)
-
-        // If member was offered a spot, offer it to the next person
-        if (wasOffered) {
-            offerSpotToNextOnWaitlist(matchId)
-        }
 
         return toWaitlistResponse(entry, 0)
     }
@@ -385,38 +410,33 @@ class MatchService(
     // ─── Member: accept waiting-list offer ────────────────────────────────────
 
     @Transactional
-    fun acceptWaitlistOffer(userId: Long, matchId: Long): MatchReservationResponse {
-        val entry = waitlistRepo.findByMatchIdAndUserId(matchId, userId)
-            ?: throw BookingRuleException("No active offer found for this match")
-
-        if (entry.status != WaitlistStatus.offered) {
-            throw BookingRuleException("You do not have an active offer for this match")
-        }
-        if (entry.offerExpiresAt != null && Instant.now().isAfter(entry.offerExpiresAt)) {
+    fun acceptWaitlistOffer(userId: Long, matchId: Long, offerId: java.util.UUID): Result<MatchReservationResponse> {
+        val match = lockMatch(matchId)
+        val entry = currentOffer(matchId, userId, offerId)
+        if (match.status != MatchStatus.published || !match.startsAt.isAfter(Instant.now()) || entry.offerExpiresAt?.isAfter(Instant.now()) != true) {
             entry.status = WaitlistStatus.expired
             entry.updatedAt = Instant.now()
             waitlistRepo.saveAndFlush(entry)
             offerSpotToNextOnWaitlist(matchId)
-            throw BookingRuleException("The offer has expired. Please join the waiting list again.")
+            return Result.failure(BookingRuleException("The offer has expired. Please join the waiting list again."))
         }
 
-        // Lock match and confirm capacity
-        val match = matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
+        // The match lock is held through confirmation.
         val confirmedCount = reservationRepo.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)
         if (confirmedCount >= match.maxPlayers) {
             entry.status = WaitlistStatus.expired
             entry.updatedAt = Instant.now()
             waitlistRepo.saveAndFlush(entry)
-            throw BookingRuleException("The spot was taken by someone else. Please rejoin the waiting list.")
+            return Result.failure(BookingRuleException("The spot was taken by someone else. Please rejoin the waiting list."))
         }
 
         // Create reservation
         val existingReservation = reservationRepo.findByMatchIdAndUserId(matchId, userId)
+        if (existingReservation?.status == MatchReservationStatus.confirmed) throw AlreadyReservedException()
         val reservation = if (existingReservation != null) {
             existingReservation.status = MatchReservationStatus.confirmed
-            existingReservation.paymentStatus = MatchPaymentStatus.unpaid
-            existingReservation.paidAt = null
-            existingReservation.paidBy = null
+            refreshUnpaidPrice(existingReservation, match)
+            existingReservation.lifecycleId = java.util.UUID.randomUUID()
             existingReservation.updatedAt = Instant.now()
             reservationRepo.saveAndFlush(existingReservation)
         } else {
@@ -434,20 +454,31 @@ class MatchService(
         waitlistRepo.saveAndFlush(entry)
 
         val court = courtRepo.findById(match.courtId).orElseThrow()
-        return toReservationResponse(reservation, match, court.name)
+        offerSpotToNextOnWaitlist(matchId)
+        return Result.success(toReservationResponse(reservation, match, court.name))
+    }
+
+    /**
+     * Security item 19.2 (club decision): a re-confirmed seat that was paid keeps its status and the
+     * price it was paid at (there is no refund flow); an unpaid seat takes the match's current price.
+     */
+    private fun refreshUnpaidPrice(reservation: MatchReservation, match: Match) {
+        if (reservation.paymentStatus != MatchPaymentStatus.paid) {
+            reservation.priceSnapshot = match.pricePerPlayer
+        }
     }
 
     // ─── Member: decline waiting-list offer ───────────────────────────────────
 
     @Transactional
-    fun declineWaitlistOffer(userId: Long, matchId: Long): WaitlistEntryResponse {
-        val entry = waitlistRepo.findByMatchIdAndUserId(matchId, userId)
-            ?: throw BookingRuleException("No active offer found for this match")
+    fun declineWaitlistOffer(userId: Long, matchId: Long, offerId: java.util.UUID): WaitlistEntryResponse {
+        lockMatch(matchId)
+        val entry = currentOffer(matchId, userId, offerId)
 
-        if (entry.status != WaitlistStatus.offered) {
-            throw BookingRuleException("You do not have an active offer for this match")
+        if (entry.offerExpiresAt?.isAfter(Instant.now()) != true) {
+            throw org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, "Offer expired. Refresh your current offer.")
         }
-
         entry.status = WaitlistStatus.declined
         entry.updatedAt = Instant.now()
         waitlistRepo.saveAndFlush(entry)
@@ -484,7 +515,7 @@ class MatchService(
         requirePadelMatch(matchId)
         return jdbc.query(
             """
-            SELECT mr.id, mr.match_id, mr.user_id, u.full_name, u.email, u.phone,
+            SELECT mr.lifecycle_id, mr.id, mr.match_id, mr.user_id, u.full_name, u.email, u.phone,
                    mr.price_snapshot, mr.status::text AS res_status,
                    mr.payment_status::text AS pay_status,
                    mr.paid_at, mr.created_at
@@ -495,6 +526,7 @@ class MatchService(
             """.trimIndent(),
             { rs, _ ->
                 AdminReservationResponse(
+                    lifecycleId = rs.getObject("lifecycle_id", java.util.UUID::class.java),
                     id = rs.getLong("id"),
                     matchId = rs.getLong("match_id"),
                     userId = rs.getLong("user_id"),
@@ -524,7 +556,7 @@ class MatchService(
             FROM match_waitlist mw
             JOIN users u ON u.id = mw.user_id
             WHERE mw.match_id = ?
-            ORDER BY mw.joined_at ASC
+            ORDER BY mw.joined_at ASC, mw.id ASC
             """.trimIndent(),
             { rs, _ ->
                 val entryId = rs.getLong("id")
@@ -551,10 +583,11 @@ class MatchService(
     // ─── Admin: mark reservation as paid ──────────────────────────────────────
 
     @Transactional
-    fun markReservationPaid(adminId: Long, reservationId: Long, paid: Boolean): AdminReservationResponse {
+    fun markReservationPaid(adminId: Long, reservationId: Long, paid: Boolean, lifecycleId: java.util.UUID): AdminReservationResponse {
+        lockMatch(reservationRepo.matchIdForReservation(reservationId) ?: throw MatchReservationNotFoundException())
         val reservation = reservationRepo.findById(reservationId).orElseThrow { MatchReservationNotFoundException() }
-        requirePadelMatch(reservation.matchId)
 
+        requireLifecycle(reservation.lifecycleId, lifecycleId)
         if (paid) {
             reservation.paymentStatus = MatchPaymentStatus.paid
             reservation.paidAt = Instant.now()
@@ -575,6 +608,7 @@ class MatchService(
         ).firstOrNull() ?: Triple("", "", null)
 
         return AdminReservationResponse(
+            lifecycleId = reservation.lifecycleId,
             id = reservation.id,
             matchId = reservation.matchId,
             userId = reservation.userId,
@@ -618,17 +652,58 @@ class MatchService(
 
     @Transactional
     fun expireStaleOffers() {
-        val expired = waitlistRepo.findExpiredOffers(Instant.now(), WaitlistStatus.offered)
-        expired.forEach { entry ->
-            entry.status = WaitlistStatus.expired
-            entry.updatedAt = Instant.now()
-            waitlistRepo.save(entry)
-            // Offer spot to next person in line
-            offerSpotToNextOnWaitlist(entry.matchId)
+        for (matchId in waitlistRepo.expiredMatchIds(Instant.now(), WaitlistStatus.offered).sorted()) {
+            lockMatch(matchId)
+            val now = Instant.now()
+            for (entry in waitlistRepo.findByMatchIdAndStatus(matchId, WaitlistStatus.offered)) {
+                if (entry.offerExpiresAt?.isAfter(now) == true) continue
+                entry.status = WaitlistStatus.expired
+                entry.updatedAt = now
+            }
+            offerSpotToNextOnWaitlist(matchId)
         }
     }
 
     // ─── Internal helpers ──────────────────────────────────────────────────────
+
+    private fun closeParticipants(matchId: Long, status: MatchStatus) {
+        if (status == MatchStatus.cancelled) {
+            // Cancel all active reservations (preserve records for history)
+            val reservations = reservationRepo.findByMatchIdAndStatus(matchId, MatchReservationStatus.confirmed)
+            reservations.forEach {
+                it.status = MatchReservationStatus.cancelled
+                it.updatedAt = Instant.now()
+            }
+            reservationRepo.saveAll(reservations)
+        }
+        // Remove all waitlist entries
+        val waitlist = waitlistRepo.findByMatchId(matchId)
+        waitlist.forEach {
+            if (it.status == WaitlistStatus.waiting || it.status == WaitlistStatus.offered) {
+                it.status = WaitlistStatus.removed
+                it.updatedAt = Instant.now()
+            }
+        }
+        waitlistRepo.saveAll(waitlist)
+    }
+
+    /** Called under the parent match lock, before any participant or queue mutation. */
+    private fun currentOffer(matchId: Long, userId: Long, expected: java.util.UUID): MatchWaitlistEntry {
+        val entry = waitlistRepo.findByMatchIdAndUserId(matchId, userId)
+        if (entry == null || entry.status != WaitlistStatus.offered || entry.offerId != expected) {
+            throw org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.CONFLICT, "Offer changed. Refresh your current offer.")
+        }
+        return entry
+    }
+
+    private fun requireLifecycle(current: java.util.UUID, expected: java.util.UUID) {
+        if (current != expected) throw org.springframework.web.server.ResponseStatusException(
+            org.springframework.http.HttpStatus.CONFLICT, "Membership or reservation changed. Refresh before trying again.")
+    }
+
+    private fun lockMatch(matchId: Long) =
+        matchRepo.findByIdForUpdate(matchId) ?: throw MatchNotFoundException()
 
     private fun requirePadelMatch(matchId: Long): Match {
         val match = matchRepo.findById(matchId).orElseThrow { MatchNotFoundException() }
@@ -638,7 +713,7 @@ class MatchService(
 
     private fun offerSpotToNextOnWaitlist(matchId: Long) {
         val match = matchRepo.findById(matchId).orElse(null) ?: return
-        if (match.sport != Sport.padel.name || match.legacySport != null || match.status != MatchStatus.published) return
+        if (match.sport != Sport.padel.name || match.legacySport != null || match.status != MatchStatus.published || !match.startsAt.isAfter(Instant.now())) return
 
         // Only offer if there is actually a free spot
         val confirmedCount = reservationRepo.countConfirmedByMatchId(matchId, MatchReservationStatus.confirmed)
@@ -650,6 +725,7 @@ class MatchService(
 
         val next = waitlistRepo.findFirstWaiting(matchId, WaitlistStatus.waiting).firstOrNull() ?: return
         next.status = WaitlistStatus.offered
+        next.offerId = java.util.UUID.randomUUID()
         next.offeredAt = Instant.now()
         next.offerExpiresAt = Instant.now().plus(OFFER_WINDOW_MINUTES, ChronoUnit.MINUTES)
         next.updatedAt = Instant.now()
@@ -693,13 +769,13 @@ class MatchService(
         // Check conflicts with regular bookings
         val bookingConflicts = bookingRepo.countOverlapping(courtId, start, end, BookingStatus.cancelled)
         if (bookingConflicts > 0) {
-            throw BookingRuleException("The selected court is already booked during this time slot")
+            throw SlotTakenException()
         }
 
         // Check conflicts with other published matches
         val matchConflicts = matchRepo.countConflictingPublished(courtId, start, end, excludeMatchId, MatchStatus.published)
         if (matchConflicts > 0) {
-            throw BookingRuleException("Another match is already scheduled on this court during this time")
+            throw SlotTakenException()
         }
     }
 
@@ -709,8 +785,7 @@ class MatchService(
         val court = courtRepo.findById(match.courtId).orElseThrow()
         if (match.sport != Sport.padel.name || match.legacySport != null || court.sport != Sport.padel.name || court.legacySport != null) throw MatchNotFoundException()
         val confirmedCount = reservationRepo.countConfirmedByMatchId(match.id, MatchReservationStatus.confirmed).toInt()
-        val waitlistCount = waitlistRepo.findByMatchIdAndStatus(match.id, WaitlistStatus.waiting).size +
-                waitlistRepo.findByMatchIdAndStatus(match.id, WaitlistStatus.offered).size
+        val waitlistCount = waitlistRepo.countByMatchIdAndStatusIn(match.id, listOf(WaitlistStatus.waiting, WaitlistStatus.offered))
         return MatchResponse(
             id = match.id,
             sport = match.sport,
@@ -739,6 +814,7 @@ class MatchService(
                 match.status == MatchStatus.published &&
                 Instant.now().isBefore(match.startsAt.minus(CANCEL_CUTOFF_HOURS, ChronoUnit.HOURS))
         return MatchReservationResponse(
+            lifecycleId = res.lifecycleId,
             id = res.id,
             matchId = match.id,
             sport = match.sport,
@@ -756,10 +832,12 @@ class MatchService(
 
     private fun toWaitlistResponse(entry: MatchWaitlistEntry, position: Int): WaitlistEntryResponse {
         return WaitlistEntryResponse(
+            lifecycleId = entry.lifecycleId,
             id = entry.id,
             matchId = entry.matchId,
             status = entry.status,
             position = position,
+            offerId = entry.offerId.takeIf { entry.status == WaitlistStatus.offered },
             offerExpiresAt = entry.offerExpiresAt?.atZone(zone)?.toOffsetDateTime()?.toString(),
             joinedAt = entry.joinedAt.atZone(zone).toOffsetDateTime().toString(),
         )

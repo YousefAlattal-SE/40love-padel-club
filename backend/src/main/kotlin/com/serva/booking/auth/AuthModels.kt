@@ -1,23 +1,7 @@
 package com.serva.booking.auth
 
-import jakarta.validation.constraints.Email
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
-
-data class RegisterRequest(
-    @field:NotBlank @field:Email
-    val email: String,
-
-    // Bcrypt only uses the first 72 bytes, so cap the length
-    @field:NotBlank @field:Size(min = 8, max = 72, message = "must be 8 to 72 characters")
-    val password: String,
-
-    @field:NotBlank @field:Size(max = 255)
-    val fullName: String,
-
-    @field:Size(max = 40)
-    val phone: String? = null,
-)
 
 /** Contact data sent by the app while creating a new Clerk-backed member profile. */
 data class ClerkBootstrapRequest(
@@ -27,7 +11,8 @@ data class ClerkBootstrapRequest(
 
 data class LoginRequest(
     @field:NotBlank val email: String,
-    @field:NotBlank val password: String,
+    // BCrypt only uses the first 72 bytes; the bound also stops oversized inputs (item 5.2).
+    @field:NotBlank @field:Size(max = 128) val password: String,
 )
 
 data class UserResponse(

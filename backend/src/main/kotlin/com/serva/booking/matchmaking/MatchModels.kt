@@ -7,6 +7,11 @@ import java.time.OffsetDateTime
 
 // ─── Admin requests ────────────────────────────────────────────────────────────
 
+private const val MIN_MATCH_PLAYERS = 2L
+private const val MAX_MATCH_PLAYERS = 20L
+private const val MAX_MATCH_PRICE = "10000"
+private const val MAX_MATCH_DESCRIPTION = 2000
+
 data class CreateMatchRequest(
     @field:NotNull
     val sport: Sport,
@@ -20,17 +25,17 @@ data class CreateMatchRequest(
     @field:NotNull
     val endsAt: OffsetDateTime,
 
-    @field:Min(2, message = "must be at least 2 players")
-    @field:Max(20, message = "must be at most 20 players")
+    @field:Min(MIN_MATCH_PLAYERS, message = "must be at least 2 players")
+    @field:Max(MAX_MATCH_PLAYERS, message = "must be at most 20 players")
     val maxPlayers: Int,
 
     @field:DecimalMin("0", message = "price cannot be negative")
-    @field:DecimalMax("10000", message = "price too large")
+    @field:DecimalMax(MAX_MATCH_PRICE, message = "price too large")
     val pricePerPlayer: BigDecimal,
 
     val skillLevel: SkillLevel = SkillLevel.open,
 
-    @field:Size(max = 2000)
+    @field:Size(max = MAX_MATCH_DESCRIPTION)
     val description: String? = null,
 
     // New matches are published by default so members can see them immediately.
@@ -43,10 +48,14 @@ data class UpdateMatchRequest(
     val courtId: Long? = null,
     val startsAt: OffsetDateTime? = null,
     val endsAt: OffsetDateTime? = null,
+    @field:Min(MIN_MATCH_PLAYERS, message = "must be at least 2 players")
+    @field:Max(MAX_MATCH_PLAYERS, message = "must be at most 20 players")
     val maxPlayers: Int? = null,
     @field:DecimalMin("0", message = "price cannot be negative")
+    @field:DecimalMax(MAX_MATCH_PRICE, message = "price too large")
     val pricePerPlayer: BigDecimal? = null,
     val skillLevel: SkillLevel? = null,
+    @field:Size(max = MAX_MATCH_DESCRIPTION)
     val description: String? = null,
     val status: MatchStatus? = null,
 )
@@ -72,6 +81,7 @@ data class MatchResponse(
 )
 
 data class MatchReservationResponse(
+    val lifecycleId: java.util.UUID,
     val id: Long,
     val matchId: Long,
     val sport: String,
@@ -88,6 +98,7 @@ data class MatchReservationResponse(
 
 /** Admin view of a reservation — includes user details. */
 data class AdminReservationResponse(
+    val lifecycleId: java.util.UUID,
     val id: Long,
     val matchId: Long,
     val userId: Long,
@@ -101,7 +112,11 @@ data class AdminReservationResponse(
     val createdAt: String,
 )
 
+data class OfferActionRequest(val offerId: java.util.UUID)
+
 data class WaitlistEntryResponse(
+    val lifecycleId: java.util.UUID,
+    val offerId: java.util.UUID?,
     val id: Long,
     val matchId: Long,
     val status: WaitlistStatus,
@@ -132,7 +147,9 @@ data class MatchTotalsResponse(
 )
 
 /** Admin update payment status */
-data class AdminMarkPaidRequest(val paid: Boolean)
+data class LifecycleActionRequest(val lifecycleId: java.util.UUID)
+
+data class AdminMarkPaidRequest(val paid: Boolean, val lifecycleId: java.util.UUID)
 
 /** Member class exceptions */
 class MatchNotFoundException : RuntimeException("Match not found")

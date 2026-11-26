@@ -91,22 +91,6 @@ export function AuthProvider({ children }) {
           )
         }
 
-        // TEMPORARY DEBUG: inspect JWT claims only.
-        const payload = sessionToken.split('.')[1]
-        const base64 = payload
-            .replace(/-/g, '+')
-            .replace(/_/g, '/')
-
-        const decoded = JSON.parse(
-            atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
-        )
-
-        console.log('Clerk JWT Claims:', {
-          iss: decoded.iss,
-          aud: decoded.aud,
-          azp: decoded.azp,
-        })
-
         // Bootstrap the user's backend profile.
         const profile = await bootstrapProfile(userId, sessionToken)
 

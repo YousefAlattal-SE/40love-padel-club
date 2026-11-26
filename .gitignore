@@ -222,3 +222,7 @@ Desktop.ini
 # ============================================
 # LinkedIn showcase screenshots
 linkedin-screenshots/
+# Local LinkedIn showcase archive
+/linkedin-screenshots.zip
+# Local database cutover script (container IDs and infrastructure details; never commit)
+/f07-cutover.ps1

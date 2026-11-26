@@ -13,12 +13,18 @@ import org.springframework.security.oauth2.server.resource.authentication.Bearer
 import java.time.Instant
 import java.util.Optional
 import java.util.UUID
+import org.springframework.security.oauth2.jwt.BadJwtException
 
 class ClerkOrLegacyJwtAuthenticationManagerTest {
     private val users = mock(UserRepository::class.java)
     private val decoder = mock(JwtDecoder::class.java)
     private val legacyJwtService = JwtService("test-only-${UUID.randomUUID()}-signing-key", 10)
-    private val manager = ClerkOrLegacyJwtAuthenticationManager(decoder, legacyJwtService, users)
+    private val manager = ClerkOrLegacyJwtAuthenticationManager(
+        decoder,
+        legacyJwtService,
+        users,
+        true
+    )
 
     @Test
     fun `uses current database role for legacy tokens instead of the token role`() {
@@ -66,6 +72,32 @@ class ClerkOrLegacyJwtAuthenticationManagerTest {
 
         assertThrows(DisabledException::class.java) {
             manager.authenticate(BearerTokenAuthenticationToken(clerkToken))
+        }
+    }
+    @Test
+    fun `rejects legacy JWT when legacy authentication is disabled`() {
+        val disabledManager = ClerkOrLegacyJwtAuthenticationManager(
+            decoder,
+            legacyJwtService,
+            users,
+            false
+        )
+
+        val legacyToken = legacyJwtService.generate(
+            User(
+                id = 15L,
+                email = "member@example.test",
+                role = Role.member
+            )
+        )
+
+        `when`(decoder.decode(legacyToken))
+            .thenThrow(BadJwtException("Invalid Clerk token"))
+
+        assertThrows(ClerkTokenAuthenticationException::class.java) {
+            disabledManager.authenticate(
+                BearerTokenAuthenticationToken(legacyToken)
+            )
         }
     }
 

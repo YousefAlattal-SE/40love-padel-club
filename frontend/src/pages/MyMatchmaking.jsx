@@ -48,6 +48,7 @@ const COPY = {
     cancellationEnded: 'Cancellation is available up to 12 hours before the match.',
     cancelConfirm: 'Cancel this reservation? You will release your spot.',
     cancelSuccess: 'Reservation cancelled.',
+    staleReservation: "Refresh to see the current reservation.",
     cancelFailed: 'We could not cancel this reservation. Please try again.',
     dismiss: 'Dismiss message',
     retry: 'Retry',
@@ -66,6 +67,7 @@ const COPY = {
     accept: 'Accept spot',
     decline: 'Decline',
     pleaseWait: 'Please wait…',
+    staleOffer: "Refresh to see your current offer.",
     acceptSuccess: 'Spot accepted! Your reservation is confirmed.',
     acceptFailed: 'We could not accept this offer. Please try again.',
     declineSuccess: 'Offer declined.',
@@ -127,6 +129,7 @@ const COPY = {
     cancellationEnded: 'يمكن الإلغاء حتى 12 ساعة قبل موعد المباراة.',
     cancelConfirm: 'هل تريد إلغاء هذا الحجز؟ سيتم تحرير مكانك.',
     cancelSuccess: 'تم إلغاء الحجز.',
+    staleReservation: "حدّث الصفحة لعرض الحجز الحالي.",
     cancelFailed: 'تعذّر إلغاء الحجز. يرجى المحاولة مرة أخرى.',
     dismiss: 'إغلاق الرسالة',
     retry: 'إعادة المحاولة',
@@ -145,6 +148,7 @@ const COPY = {
     accept: 'قبول المكان',
     decline: 'رفض العرض',
     pleaseWait: 'يرجى الانتظار…',
+    staleOffer: "حدّث الصفحة لعرض عرضك الحالي.",
     acceptSuccess: 'تم قبول المكان! تم تأكيد حجزك.',
     acceptFailed: 'تعذّر قبول العرض. يرجى المحاولة مرة أخرى.',
     declineSuccess: 'تم رفض العرض.',
@@ -388,7 +392,7 @@ function WaitlistCard({ entry, onLeave, busyId, locale, copy }) {
         </div>
         <div className="mb-booking-actions mym-waitlist-actions">
           <span className="mb-status mym-status-waiting"><span className="mb-status-dot" aria-hidden="true" />{copy.waitlist}</span>
-          <button type="button" className="mb-cancel-button" onClick={() => onLeave(entry.matchId)} disabled={isBusy}>
+          <button type="button" className="mb-cancel-button" onClick={() => onLeave(entry)} disabled={isBusy}>
             {isBusy ? copy.pleaseWait : copy.leaveList}
           </button>
         </div>
@@ -463,55 +467,55 @@ export default function MyMatchmaking() {
     setBusyId(reservation.id)
     setNotice(null)
     try {
-      await api.post(`/matches/reservations/${reservation.id}/cancel`)
+      await api.post(`/matches/reservations/${reservation.id}/cancel`, { lifecycleId: reservation.lifecycleId })
       setNotice({ type: 'success', text: copy.cancelSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.cancelFailed })
+      setNotice({ type: 'error', text: err.response?.status === 409 ? copy.staleReservation : ((locale !== 'ar' && errorMessage(err)) || copy.cancelFailed) })
     } finally {
       setBusyId(null)
     }
   }
 
-  async function leaveWaitlist(matchId) {
+  async function leaveWaitlist({ matchId, lifecycleId }) {
     if (!window.confirm(copy.leaveConfirm)) return
     setBusyId(`wl-${matchId}`)
     setNotice(null)
     try {
-      await api.delete(`/matches/${matchId}/waitlist`)
+      await api.delete(`/matches/${matchId}/waitlist`, { data: { lifecycleId } })
       setNotice({ type: 'success', text: copy.leaveSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.leaveFailed })
+      setNotice({ type: 'error', text: err.response?.status === 409 ? copy.staleOffer : ((locale !== 'ar' && errorMessage(err)) || copy.leaveFailed) })
     } finally {
       setBusyId(null)
     }
   }
 
-  async function acceptOffer(matchId) {
+  async function acceptOffer({ matchId, offerId }) {
     setBusyId(`accept-${matchId}`)
     setNotice(null)
     try {
-      await api.post(`/matches/${matchId}/waitlist/accept`)
+      await api.post(`/matches/${matchId}/waitlist/accept`, { offerId })
       setNotice({ type: 'success', text: copy.acceptSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.acceptFailed })
+      setNotice({ type: 'error', text: err.response?.status === 409 ? copy.staleOffer : ((locale !== 'ar' && errorMessage(err)) || copy.acceptFailed) })
     } finally {
       setBusyId(null)
     }
   }
 
-  async function declineOffer(matchId) {
+  async function declineOffer({ matchId, offerId }) {
     if (!window.confirm(copy.declineConfirm)) return
     setBusyId(`decline-${matchId}`)
     setNotice(null)
     try {
-      await api.post(`/matches/${matchId}/waitlist/decline`)
+      await api.post(`/matches/${matchId}/waitlist/decline`, { offerId })
       setNotice({ type: 'success', text: copy.declineSuccess })
       load()
     } catch (err) {
-      setNotice({ type: 'error', text: (locale !== 'ar' && errorMessage(err)) || copy.declineFailed })
+      setNotice({ type: 'error', text: err.response?.status === 409 ? copy.staleOffer : ((locale !== 'ar' && errorMessage(err)) || copy.declineFailed) })
     } finally {
       setBusyId(null)
     }
@@ -578,8 +582,8 @@ export default function MyMatchmaking() {
                         key={entry.id}
                         entry={entry}
                         copy={copy}
-                        onAccept={() => acceptOffer(entry.matchId)}
-                        onDecline={() => declineOffer(entry.matchId)}
+                        onAccept={() => acceptOffer(entry)}
+                        onDecline={() => declineOffer(entry)}
                         loading={busyId === `accept-${entry.matchId}` || busyId === `decline-${entry.matchId}`}
                     />
                 ))}

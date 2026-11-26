@@ -83,4 +83,42 @@ class ClerkUserProvisioningServiceTest {
         assertNull(response.phone)
         verifyNoInteractions(profiles)
     }
+
+    // ─── Concurrent first bootstrap (item 1.2) ────────────────────────────────
+
+    private fun newIdentity() {
+        `when`(profiles.getVerifiedProfile("user_new")).thenReturn(ClerkProfile("new@example.test", "New Member"))
+        `when`(users.existsByEmail("new@example.test")).thenReturn(false)
+        `when`(users.save(any(User::class.java)))
+            .thenThrow(org.springframework.dao.DataIntegrityViolationException("duplicate key"))
+    }
+
+    @Test
+    fun `concurrent first bootstrap returns the account created by the winning request`() {
+        val winner = User(id = 40L, email = "new@example.test", clerkUserId = "user_new", fullName = "New Member")
+        `when`(users.findByClerkUserId("user_new")).thenReturn(null, winner)
+        newIdentity()
+
+        val response = service.bootstrap("user_new", null)
+
+        assertEquals(40L, response.id)
+        assertEquals(Role.member, response.role)
+    }
+
+    @Test
+    fun `a unique violation without a row for this subject is an email conflict`() {
+        `when`(users.findByClerkUserId("user_new")).thenReturn(null, null)
+        newIdentity()
+
+        assertThrows(EmailAlreadyUsedException::class.java) { service.bootstrap("user_new", null) }
+    }
+
+    @Test
+    fun `a concurrently created but inactive account is still rejected`() {
+        val inactive = User(id = 41L, email = "new@example.test", clerkUserId = "user_new", isActive = false)
+        `when`(users.findByClerkUserId("user_new")).thenReturn(null, inactive)
+        newIdentity()
+
+        assertThrows(InvalidCredentialsException::class.java) { service.bootstrap("user_new", null) }
+    }
 }

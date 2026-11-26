@@ -1,68 +1,95 @@
 package com.serva.booking.auth
 
-import jakarta.validation.Validation
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import org.springframework.security.crypto.password.PasswordEncoder
+import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
+import org.springframework.test.web.client.MockRestServiceServer
+import org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo
+import org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
-import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean
+import org.springframework.transaction.annotation.Transactional
+import com.serva.booking.testsupport.DatabaseIntegrationTest
+import org.springframework.web.client.RestClient
+import org.springframework.web.context.WebApplicationContext
+import org.springframework.web.server.ResponseStatusException
 
-class AuthServiceRegistrationTest {
+@DatabaseIntegrationTest
+@SpringBootTest
+@Transactional
+class AuthServiceRegistrationTest @Autowired constructor(
+    context: WebApplicationContext,
+    private val users: UserRepository,
+    private val passwords: PasswordEncoder,
+    private val auth: AuthService,
+) {
+    private val mvc = MockMvcBuilders.webAppContextSetup(context)
+        .apply<org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder>(springSecurity()).build()
+
     @Test
-    fun `registers a member when the optional phone is omitted`() {
-        val users = mock(UserRepository::class.java)
-        val encoder = mock(org.springframework.security.crypto.password.PasswordEncoder::class.java)
-        val jwt = JwtService("registration-test-secret-that-is-long-enough", 30, "test", System.getProperty("java.io.tmpdir"))
-        `when`(users.existsByEmail("new@example.test")).thenReturn(false)
-        `when`(encoder.encode("secure-password")).thenReturn("encoded-password")
-        `when`(users.save(any(User::class.java))).thenAnswer { it.getArgument<User>(0) }
-
-        val response = AuthService(users, encoder, jwt).register(
-            RegisterRequest(
-                email = "new@example.test",
-                password = "secure-password",
-                fullName = "New Member",
-            ),
-        )
-
-        assertTrue(response.token.isNotBlank())
-        assertEquals(Role.member, response.user.role)
-        assertNull(response.user.phone)
-
-        val validator = Validation.buildDefaultValidatorFactory().validator
-        assertTrue(validator.validate(RegisterRequest("new@example.test", "secure-password", "New Member")).isEmpty())
+    fun `no caller can claim an address through the retired registration route`() {
+        val email = "unused@example.test"
+        fun request() = post("/api/auth/register").contentType(MediaType.APPLICATION_JSON)
+            .content("""{"email":"$email","password":"fixture-password","fullName":"Fixture Member"}""")
+        mvc.perform(request()).andExpect(status().isUnauthorized)
+        mvc.perform(request().with(user("member").roles("MEMBER"))).andExpect(status().isNotFound)
+        mvc.perform(post("/api/auth/bootstrap")).andExpect(status().isUnauthorized)
+        assertFalse(users.existsByEmail(email))
     }
 
     @Test
-    fun `registration endpoint accepts a request with no phone property`() {
-        val users = mock(UserRepository::class.java)
-        val encoder = mock(org.springframework.security.crypto.password.PasswordEncoder::class.java)
-        val jwt = JwtService("registration-test-secret-that-is-long-enough", 30, "test", System.getProperty("java.io.tmpdir"))
-        `when`(users.existsByEmail("new@example.test")).thenReturn(false)
-        `when`(encoder.encode("secure-password")).thenReturn("encoded-password")
-        `when`(users.save(any(User::class.java))).thenAnswer { it.getArgument<User>(0) }
-        val controller = AuthController(
-            AuthService(users, encoder, jwt),
-            mock(ClerkUserProvisioningService::class.java),
-        )
-        val validator = LocalValidatorFactoryBean().apply { afterPropertiesSet() }
-        val mockMvc = MockMvcBuilders.standaloneSetup(controller).setValidator(validator).build()
+    fun `Clerk onboarding requires the primary address itself to be verified`() {
+        val builder = RestClient.builder()
+        val server = MockRestServiceServer.bindTo(builder).build()
+        val service = ClerkUserProvisioningService(users, ClerkProfileClient(builder, "test-only"))
+        val email = "primary@example.test"
+        fun reply(subject: String, verification: String) {
+            server.expect(requestTo("https://api.clerk.com/v1/users/$subject")).andRespond(withSuccess(
+                """{"primary_email_address_id":"primary","email_addresses":[
+                    {"id":"secondary","email_address":"other@example.test","verification":{"status":"verified"}},
+                    {"id":"primary","email_address":"$email","verification":{"status":"$verification"}}
+                ],"first_name":"Fixture"}""", MediaType.APPLICATION_JSON))
+        }
+        reply("subject-one", "unverified")
+        val rejected = assertThrows(ResponseStatusException::class.java) { service.bootstrap("subject-one", null) }
+        assertEquals(HttpStatus.FORBIDDEN, rejected.statusCode)
+        assertFalse(users.existsByEmail(email))
+        server.verify()
+        server.reset()
+        reply("subject-one", "verified")
+        val created = service.bootstrap("subject-one", null)
+        assertEquals(Role.member, created.role)
+        assertEquals(email, created.email)
+        assertNull(users.findByEmail(email)?.passwordHash)
+        assertEquals(created.id, service.bootstrap("subject-one", null).id)
+        server.verify()
+        server.reset()
+        reply("subject-two", "verified")
+        assertThrows(EmailAlreadyUsedException::class.java) { service.bootstrap("subject-two", null) }
+        assertEquals("subject-one", users.findByEmail(email)?.clerkUserId)
+        assertNull(users.findByClerkUserId("subject-two"))
+        server.verify()
+    }
 
-        mockMvc.perform(
-            post("/api/auth/register")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""{"email":"new@example.test","password":"secure-password","fullName":"New Member"}"""),
-        ).andExpect(status().isCreated)
-
-        val saved = org.mockito.ArgumentCaptor.forClass(User::class.java)
-        org.mockito.Mockito.verify(users).save(saved.capture())
-        assertNull(saved.value.phone)
+    @Test
+    fun `existing legacy passwords still issue tokens with the database role`() {
+        for (role in listOf(Role.member, Role.admin)) {
+            val email = "${role.name}@example.test"
+            val password = "local-fixture-password"
+            users.saveAndFlush(User(email = email, passwordHash = passwords.encode(password), role = role))
+            val token = auth.login(LoginRequest(email, password)).token
+            mvc.perform(get("/api/auth/me").header("Authorization", "Bearer $token"))
+                .andExpect(status().isOk).andExpect(jsonPath("$.role").value(role.name))
+            val expected = if (role == Role.admin) status().isOk else status().isForbidden
+            mvc.perform(get("/api/admin/overview").header("Authorization", "Bearer $token")).andExpect(expected)
+            assertNull(users.findByEmail(email)?.clerkUserId)
+        }
     }
 }

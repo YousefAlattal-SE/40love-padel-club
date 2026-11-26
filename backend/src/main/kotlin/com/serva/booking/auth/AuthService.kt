@@ -10,28 +10,20 @@ class AuthService(
     private val jwt: JwtService,
 ) {
 
-    fun register(req: RegisterRequest): AuthResponse {
-        val email = req.email.trim().lowercase()
-        if (users.existsByEmail(email)) throw EmailAlreadyUsedException()
-
-        // Everyone who registers through the API is a member. Admins are promoted manually in the database.
-        val user = users.save(
-            User(
-                email = email,
-                passwordHash = requireNotNull(encoder.encode(req.password)),
-                fullName = req.fullName.trim(),
-                phone = ContactPhone.normalizeOptional(req.phone),
-                role = Role.member,
-            )
-        )
-        return AuthResponse(jwt.generate(user), user.toResponse())
+    // Hash of a value nobody can submit as "the" password; compared against when there is no usable
+    // stored hash, so every login attempt costs one adaptive hash comparison (item 5.1).
+    private val timingEqualiserHash: String by lazy {
+        checkNotNull(encoder.encode("timing-equaliser-${java.util.UUID.randomUUID()}"))
     }
 
     fun login(req: LoginRequest): AuthResponse {
         val user = users.findByEmail(req.email.trim().lowercase())
+        val storedHash = user?.passwordHash
 
-        // Same error for "no such email" and "wrong password" so attackers can't probe which emails exist
-        if (user == null || !user.isActive || user.passwordHash?.let { encoder.matches(req.password, it) } != true) {
+        // Same error and the same hashing work for "no such email", inactive, Clerk-only and
+        // "wrong password", so neither the message nor the response time reveals which emails exist.
+        val passwordMatches = encoder.matches(req.password, storedHash ?: timingEqualiserHash)
+        if (user == null || !user.isActive || storedHash == null || !passwordMatches) {
             throw InvalidCredentialsException()
         }
         return AuthResponse(jwt.generate(user), user.toResponse())

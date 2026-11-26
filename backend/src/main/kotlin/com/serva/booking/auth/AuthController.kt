@@ -1,31 +1,34 @@
 package com.serva.booking.auth
 
 import jakarta.validation.Valid
-import org.springframework.http.HttpStatus
 import org.springframework.security.core.Authentication
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
-import org.springframework.web.bind.annotation.ResponseStatus
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.beans.factory.annotation.Value
+import org.springframework.http.HttpStatus
+import org.springframework.web.server.ResponseStatusException
 
 @RestController
 @RequestMapping("/api/auth")
 class AuthController(
     private val auth: AuthService,
     private val clerkUsers: ClerkUserProvisioningService,
+    @Value($$"${app.auth.legacy-jwt-enabled:false}")
+    private val legacyJwtEnabled: Boolean,
 ) {
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    fun register(@Valid @RequestBody req: RegisterRequest): AuthResponse = auth.register(req)
-
     @PostMapping("/login")
-    fun login(@Valid @RequestBody req: LoginRequest): AuthResponse = auth.login(req)
+    fun login(@Valid @RequestBody req: LoginRequest): AuthResponse {
+        if (!legacyJwtEnabled) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        }
 
-    /** Creates or loads the app profile for an already verified Clerk session. */
+        return auth.login(req)
+    }
     @PostMapping("/bootstrap")
     fun bootstrap(
         authentication: Authentication,

@@ -1,5 +1,10 @@
 package com.serva.booking.contact
 
+import com.serva.booking.config.StaffSearch
+import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.RequestMethod
+import com.serva.booking.config.ApiPage
+import org.springframework.web.bind.annotation.RequestParam
 import com.serva.booking.auth.ContactPhone
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -79,17 +84,22 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
     fun requestError(error: ResponseStatusException) = ResponseEntity.status(error.statusCode).body(error.body)
 
     // SecurityConfig requires ROLE_ADMIN for /api/admin/**.
-    @GetMapping("/admin/contact-messages")
-    fun listForAdmin(): List<ContactMessageResponse> = jdbc.query(
+    @RequestMapping("/admin/contact-messages", method = [RequestMethod.GET, RequestMethod.POST])
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
+    fun listForAdmin(page: ApiPage, @Valid @RequestBody(required = false) criteria: StaffSearch?, @RequestParam(defaultValue = "all") filter: String): List<ContactMessageResponse> = jdbc.query(
         """
         SELECT id, name, phone, sport, legacy_sport, preferred_time, message, status, created_at
         FROM contact_messages
-        ORDER BY CASE WHEN status = 'new' THEN 0 ELSE 1 END, created_at DESC
+        WHERE strpos(lower(concat_ws(' ',name,phone,sport,preferred_time,message)), lower(?)) > 0
+          AND (? = 'all' OR status = ?)
+        ORDER BY CASE WHEN status = 'new' THEN 0 ELSE 1 END, created_at DESC, id DESC
+        LIMIT ? OFFSET ?
         """.trimIndent(),
-        mapper,
+        mapper, criteria?.search.orEmpty().trim(), filter, filter, page.size, page.offset,
     )
 
     @PatchMapping("/admin/contact-messages/{id}")
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
     fun updateStatus(
         @PathVariable id: Long,
         @RequestBody request: UpdateContactMessageStatusRequest,

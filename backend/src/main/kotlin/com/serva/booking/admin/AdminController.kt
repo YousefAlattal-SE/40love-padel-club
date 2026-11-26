@@ -1,6 +1,11 @@
 
 package com.serva.booking.admin
 
+import com.serva.booking.config.StaffSearch
+import jakarta.validation.Valid
+import org.springframework.web.bind.annotation.RequestMethod
+import com.serva.booking.config.ApiPage
+import org.springframework.web.bind.annotation.RequestParam
 import com.serva.booking.court.Sport
 import com.serva.booking.booking.PhoneNumberRequiredException
 import org.springframework.http.HttpStatus
@@ -29,6 +34,7 @@ data class AdminOverviewResponse(
     val revenueToday: BigDecimal,
     val revenueThisMonth: BigDecimal,
     val bookingsThisMonth: Long,
+    val statusCounts: Map<String, Long>,
 )
 
 data class AdminBookingResponse(
@@ -80,9 +86,11 @@ data class AdminCustomerResponse(
     val bookingValue: BigDecimal,
 )
 
-// All routes under /api/admin are additionally restricted to ROLE_ADMIN in SecurityConfig.
+// All routes under /api/admin are restricted to ROLE_ADMIN in SecurityConfig; @PreAuthorize is a
+// second, method-level layer in case the URL rules are ever reordered (security item 9.1).
 @RestController
 @RequestMapping("/api/admin")
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 class AdminController(private val jdbc: JdbcTemplate) {
 
     private val zone = ZoneId.of("Asia/Amman")
@@ -112,6 +120,10 @@ class AdminController(private val jdbc: JdbcTemplate) {
             unpaidBookings = count("SELECT COUNT(*) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.status = 'confirmed' AND b.paid_at IS NULL"),
             revenueToday = money(startToday, startTomorrow),
             revenueThisMonth = money(startMonth, startNextMonth),
+            statusCounts = jdbc.query(
+                """SELECT b.status::text, count(*) FROM bookings b JOIN courts c ON c.id=b.court_id
+                   WHERE c.sport='padel' AND c.legacy_sport IS NULL GROUP BY b.status"""
+            ) { rs, _ -> rs.getString(1) to rs.getLong(2) }.toMap(),
             bookingsThisMonth = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.starts_at >= ? AND b.starts_at < ? AND b.status <> 'cancelled'",
                 Long::class.java,
@@ -121,8 +133,8 @@ class AdminController(private val jdbc: JdbcTemplate) {
         )
     }
 
-    @GetMapping("/bookings")
-    fun bookings(): List<AdminBookingResponse> = jdbc.query(
+    @RequestMapping("/bookings", method = [RequestMethod.GET, RequestMethod.POST])
+    fun bookings(page: ApiPage, @Valid @RequestBody(required = false) criteria: StaffSearch?, @RequestParam(defaultValue = "all") filter: String): List<AdminBookingResponse> = jdbc.query(
         """
         SELECT b.id, u.full_name, u.email, u.phone, c.name AS court_name,
                c.sport::text AS sport, b.starts_at, b.ends_at, b.total_price,
@@ -131,31 +143,36 @@ class AdminController(private val jdbc: JdbcTemplate) {
         JOIN users u ON u.id = b.user_id
         JOIN courts c ON c.id = b.court_id
         WHERE c.sport = 'padel' AND c.legacy_sport IS NULL
+          AND strpos(lower(concat_ws(' ',u.full_name,u.email,u.phone,c.name,c.sport,b.id::text)), lower(?)) > 0
+          AND (? = 'all' OR b.status::text = ? OR (? = 'unpaid' AND b.paid_at IS NULL AND b.status='confirmed'))
         ORDER BY b.starts_at DESC, b.id DESC
-        """.trimIndent()
-    ) { rs, _ ->
-        val start = rs.getObject("starts_at", OffsetDateTime::class.java)
-        val end = rs.getObject("ends_at", OffsetDateTime::class.java)
+        LIMIT ? OFFSET ?
+        """.trimIndent(),
+        { rs, _ ->
+            val start = rs.getObject("starts_at", OffsetDateTime::class.java)
+            val end = rs.getObject("ends_at", OffsetDateTime::class.java)
 
-        AdminBookingResponse(
-            id = rs.getLong("id"),
-            customerName = rs.getString("full_name"),
-            email = rs.getString("email"),
-            phone = rs.getString("phone"),
-            courtName = rs.getString("court_name"),
-            sport = rs.getString("sport"),
-            startsAt = start.toString(),
-            endsAt = end.toString(),
-            hours = Duration.between(start.toInstant(), end.toInstant()).toHours(),
-            totalPrice = rs.getBigDecimal("total_price"),
-            status = rs.getString("status"),
-            paid = rs.getTimestamp("paid_at") != null,
-            paymentMethod = rs.getString("payment_method"),
-            createdAt = rs.getObject("created_at", OffsetDateTime::class.java)?.toString() ?: "",
-        )
-    }
+            AdminBookingResponse(
+                id = rs.getLong("id"),
+                customerName = rs.getString("full_name"),
+                email = rs.getString("email"),
+                phone = rs.getString("phone"),
+                courtName = rs.getString("court_name"),
+                sport = rs.getString("sport"),
+                startsAt = start.toString(),
+                endsAt = end.toString(),
+                hours = Duration.between(start.toInstant(), end.toInstant()).toHours(),
+                totalPrice = rs.getBigDecimal("total_price"),
+                status = rs.getString("status"),
+                paid = rs.getTimestamp("paid_at") != null,
+                paymentMethod = rs.getString("payment_method"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)?.toString() ?: "",
+            )
+        }, criteria?.search.orEmpty().trim(), filter, filter, filter, page.size, page.offset,
+    )
 
     @PatchMapping("/bookings/{id}/status")
+    @org.springframework.transaction.annotation.Transactional
     fun updateBookingStatus(
         @PathVariable id: Long,
         @RequestBody request: AdminBookingStatusRequest,
@@ -324,37 +341,44 @@ class AdminController(private val jdbc: JdbcTemplate) {
         return pricing().first { it.sport == sportName }
     }
 
-    @GetMapping("/customers")
-    fun customers(): List<AdminCustomerResponse> = jdbc.query(
+    @RequestMapping("/customers", method = [RequestMethod.GET, RequestMethod.POST])
+    fun customers(page: ApiPage, @Valid @RequestBody(required = false) criteria: StaffSearch?, @RequestParam(defaultValue = "all") filter: String): List<AdminCustomerResponse> = jdbc.query(
         """
         SELECT u.id, u.email, u.full_name, u.phone, u.is_active, u.created_at,
                COUNT(b.id) FILTER (WHERE b.status <> 'cancelled') AS booking_count,
                COALESCE(SUM(b.total_price) FILTER (WHERE b.status <> 'cancelled'), 0) AS booking_value
-        FROM users u LEFT JOIN bookings b ON b.user_id = u.id
+        FROM (
+            SELECT id, email, full_name, phone, is_active, created_at FROM users
+            WHERE role = 'member'
+              AND strpos(lower(concat_ws(' ',full_name,email,phone,id::text)), lower(?)) > 0
+              AND (? = 'all' OR (CASE WHEN is_active THEN 'active' ELSE 'inactive' END) = ?)
+            ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?
+        ) u LEFT JOIN bookings b ON b.user_id = u.id
           AND EXISTS (SELECT 1 FROM courts c WHERE c.id = b.court_id AND c.sport = 'padel' AND c.legacy_sport IS NULL)
-        WHERE u.role = 'member'
         GROUP BY u.id, u.email, u.full_name, u.phone, u.is_active, u.created_at
-        ORDER BY u.created_at DESC
-        """.trimIndent()
-    ) { rs, _ ->
-        AdminCustomerResponse(
-            id = rs.getLong("id"),
-            email = rs.getString("email"),
-            fullName = rs.getString("full_name"),
-            phone = rs.getString("phone"),
-            active = rs.getBoolean("is_active"),
-            createdAt = rs.getObject("created_at", OffsetDateTime::class.java)?.toString() ?: "",
-            bookingCount = rs.getLong("booking_count"),
-            bookingValue = rs.getBigDecimal("booking_value") ?: BigDecimal.ZERO,
-        )
-    }
+        ORDER BY u.created_at DESC, u.id DESC
+        """.trimIndent(),
+        { rs, _ ->
+            AdminCustomerResponse(
+                id = rs.getLong("id"),
+                email = rs.getString("email"),
+                fullName = rs.getString("full_name"),
+                phone = rs.getString("phone"),
+                active = rs.getBoolean("is_active"),
+                createdAt = rs.getObject("created_at", OffsetDateTime::class.java)?.toString() ?: "",
+                bookingCount = rs.getLong("booking_count"),
+                bookingValue = rs.getBigDecimal("booking_value") ?: BigDecimal.ZERO,
+            )
+        }, criteria?.search.orEmpty().trim(), filter, filter, page.size, page.offset,
+    )
 
     private fun count(sql: String): Long =
         jdbc.queryForObject(sql, Long::class.java) ?: 0L
 
     private fun money(from: OffsetDateTime, until: OffsetDateTime): BigDecimal =
         jdbc.queryForObject(
-            "SELECT COALESCE(SUM(COALESCE(b.paid_amount, b.total_price)), 0) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.paid_at >= ? AND b.paid_at < ?",
+            // Waived bookings are settled but bring in no money (security item 19.3).
+            "SELECT COALESCE(SUM(COALESCE(b.paid_amount, b.total_price)), 0) FROM bookings b JOIN courts c ON c.id = b.court_id WHERE c.sport = 'padel' AND c.legacy_sport IS NULL AND b.paid_at >= ? AND b.paid_at < ? AND b.payment_method IS DISTINCT FROM 'waived'",
             BigDecimal::class.java,
             from,
             until,
