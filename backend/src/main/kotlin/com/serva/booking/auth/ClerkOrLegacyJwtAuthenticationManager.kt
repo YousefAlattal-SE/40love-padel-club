@@ -12,6 +12,7 @@ import org.springframework.security.oauth2.jwt.JwtException
 import org.springframework.security.oauth2.jwt.JwtValidationException
 import org.springframework.security.oauth2.server.resource.authentication.BearerTokenAuthenticationToken
 import org.springframework.stereotype.Component
+import org.springframework.beans.factory.annotation.Value
 
 data class ClerkIdentityPrincipal(val clerkUserId: String)
 
@@ -22,6 +23,8 @@ class ClerkOrLegacyJwtAuthenticationManager(
     private val jwtDecoder: JwtDecoder,
     private val legacyJwtService: JwtService,
     private val users: UserRepository,
+    @Value($$"${app.auth.legacy-jwt-enabled:false}")
+    private val legacyJwtEnabled: Boolean,
 ) : AuthenticationManager {
 
     override fun authenticate(authentication: Authentication): Authentication {
@@ -29,12 +32,16 @@ class ClerkOrLegacyJwtAuthenticationManager(
             ?: throw ClerkTokenAuthenticationException("unsupported_bearer_authentication")
 
         // Keep old issued tokens valid during rollout, but fetch their current role from PostgreSQL.
-        val legacyUser = legacyJwtService.parse(bearer.token)
-        if (legacyUser != null) {
-            val user = users.findById(legacyUser.id).orElseThrow {
-                BadCredentialsException("Account is unavailable")
+        if (legacyJwtEnabled) {
+            val legacyUser = legacyJwtService.parse(bearer.token)
+
+            if (legacyUser != null) {
+                val user = users.findById(legacyUser.id).orElseThrow {
+                    BadCredentialsException("Account is unavailable")
+                }
+
+                return authenticateDatabaseUser(user)
             }
-            return authenticateDatabaseUser(user)
         }
 
         val clerkJwt = try {

@@ -11,7 +11,8 @@ data class ClerkBootstrapRequest(
 
 data class LoginRequest(
     @field:NotBlank val email: String,
-    @field:NotBlank val password: String,
+    // BCrypt only uses the first 72 bytes; the bound also stops oversized inputs (item 5.2).
+    @field:NotBlank @field:Size(max = 128) val password: String,
 )
 
 data class UserResponse(

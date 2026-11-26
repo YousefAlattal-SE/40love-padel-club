@@ -46,11 +46,15 @@ class User(
     @Column(name = "skill_level")
     var skillLevel: String? = null,
 
+    // Role and active state are written on insert only. The application never changes them
+    // (administrators do so directly in PostgreSQL), so a future save of a modified entity
+    // cannot escalate privileges or reactivate an account (security item 3.1a).
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "role", updatable = false)
     val role: Role = Role.member,
 
-    @Column(name = "is_active")
+    @Column(name = "is_active", updatable = false)
     val isActive: Boolean = true,
 
     @Column(name = "created_at", updatable = false)
