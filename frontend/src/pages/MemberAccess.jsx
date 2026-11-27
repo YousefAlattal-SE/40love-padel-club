@@ -5,8 +5,8 @@ import { useAuthPreferences } from '../authPreferences'
 import { authPageUrl, destinationFor, requestedPath, safeReturnPath } from '../authRouting'
 import { clerkAppearance } from '../clerkAppearance'
 import AuthShell, { AuthStatus } from '../components/AuthShell'
-import court from '../assets/40love-court-walkway.jpeg'
-import coffee from '../assets/40love-court-coffee.jpeg'
+import court from '../assets/40love-court-walkway.webp'
+import coffee from '../assets/40love-court-coffee.webp'
 
 const COPY = {
   en: {

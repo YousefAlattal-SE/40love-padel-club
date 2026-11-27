@@ -117,7 +117,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 .fortylove-site .site-nav:not(.scrolled) .icon-btn { border-color: rgba(255, 255, 255, .36); background: rgba(11, 36, 31, .34); }
 .fortylove-site .site-nav:not(.scrolled) .desktop-nav a:hover { color: #fff; background: rgba(255, 255, 255, .11); }
 .fortylove-site .hero { min-height: clamp(680px, 94svh, 930px); padding: 138px 0 145px; align-items: center; background: #102e2a; }
-.fortylove-site .hero-media { display: block !important; inset: -3% -2% -3%; opacity: 1; background-image: url('./assets/40love-courts-sunset.jpeg'); background-position: center 58%; filter: saturate(.86) contrast(1.02); }
+.fortylove-site .hero-media { display: block !important; inset: -3% -2% -3%; opacity: 1; background-image: url('./assets/40love-courts-sunset.webp'); background-position: center 58%; filter: saturate(.86) contrast(1.02); }
 .fortylove-site .hero-ambient { opacity: .82; }
 .fortylove-site .hero-ambient__glow { opacity: .34; mix-blend-mode: screen; }
 .fortylove-site .hero-ambient__glow--lime { top: 6%; right: 12%; }
@@ -261,7 +261,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 .club-detail-page { width: 100%; max-width: none; min-height: calc(100vh - 140px); margin: 0; padding: 0; }
 .club-detail-page .club-back-home { display: inline-flex; min-height: 38px; align-items: center; margin-bottom: 12px; color: var(--member-muted); font-size: 12px; font-weight: 700; text-decoration: none; transition: color .2s ease; }
 .club-detail-page .club-back-home:hover { color: var(--member-teal); }
-.club-detail-page .mb-page-hero { position: relative; isolation: isolate; min-height: 365px; align-items: end; gap: clamp(20px, 4vw, 54px); margin-bottom: 46px; padding: clamp(28px, 5vw, 58px); overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 26px; background: linear-gradient(90deg, rgba(8,29,25,.91) 0%, rgba(8,29,25,.75) 47%, rgba(8,29,25,.34) 100%), url('./assets/40love-courts-sunset.jpeg') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.15); }
+.club-detail-page .mb-page-hero { position: relative; isolation: isolate; min-height: 365px; align-items: end; gap: clamp(20px, 4vw, 54px); margin-bottom: 46px; padding: clamp(28px, 5vw, 58px); overflow: hidden; border: 1px solid rgba(255,255,255,.16); border-radius: 26px; background: linear-gradient(90deg, rgba(8,29,25,.91) 0%, rgba(8,29,25,.75) 47%, rgba(8,29,25,.34) 100%), url('./assets/40love-courts-sunset.webp') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.15); }
 .club-detail-page .mb-page-hero::after { position: absolute; z-index: -1; inset: 0; content: ''; opacity: .24; background: linear-gradient(90deg, transparent 49.8%, rgba(255,255,255,.28) 50%, transparent 50.2%), linear-gradient(0deg, transparent 49.8%, rgba(255,255,255,.23) 50%, transparent 50.2%); background-size: 45% 52%; mask-image: linear-gradient(90deg, transparent, #000 85%); pointer-events: none; }
 .club-detail-page .mb-page-tag { min-height: 32px; border-color: rgba(255,255,255,.32); color: #f6f7ee; background: rgba(9,33,29,.34); }
 .club-detail-page .mb-hero-copy h1 { max-width: 820px; margin: 19px 0 15px; color: #fbfcf6; font-size: clamp(44px, 6vw, 76px); line-height: .98; text-shadow: 0 6px 24px rgba(0,0,0,.18); }
@@ -380,7 +380,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 :root[data-theme='dark'] .my-bookings-page.my-matchmaking-page .mym-notice-success { color: var(--member-ink); border-color: color-mix(in srgb, var(--member-lime) 42%, var(--member-line)); background: color-mix(in srgb, var(--member-lime) 15%, var(--member-surface)); }
 
 /* ClubPage shares the member-bookings shell; keep its photo hero ahead of generic account rules. */
-.my-bookings-page.club-detail-page .mb-page-hero { min-height: 365px; align-items: end; background: linear-gradient(90deg, rgba(8,29,25,.91) 0%, rgba(8,29,25,.75) 47%, rgba(8,29,25,.34) 100%), url('./assets/40love-courts-sunset.jpeg') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.15); }
+.my-bookings-page.club-detail-page .mb-page-hero { min-height: 365px; align-items: end; background: linear-gradient(90deg, rgba(8,29,25,.91) 0%, rgba(8,29,25,.75) 47%, rgba(8,29,25,.34) 100%), url('./assets/40love-courts-sunset.webp') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.15); }
 .my-bookings-page.club-detail-page .mb-page-tag { border-color: rgba(255,255,255,.32); color: #f6f7ee; background: rgba(9,33,29,.34); }
 .my-bookings-page.club-detail-page .mb-hero-copy h1 { color: #fbfcf6; }
 .my-bookings-page.club-detail-page .mb-hero-copy h1 span { color: var(--member-lime); }
@@ -393,7 +393,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 /* Booking flow: strong schedule hierarchy and clear live slot states. */
 .booking-page { --text: var(--member-ink); --muted: var(--member-muted); --surface: var(--member-surface); --surface-2: var(--member-surface-raised); --line: var(--member-line); --booking-accent: var(--member-lime); --booking-accent-soft: color-mix(in srgb, var(--member-lime) 16%, var(--member-surface)); --booking-border: var(--member-line-strong); color: var(--member-ink); }
 :root[data-theme='dark'] .booking-page { --text: var(--member-ink); --muted: var(--member-muted); --surface: var(--member-surface); --surface-2: var(--member-surface-raised); --line: var(--member-line); --booking-accent: var(--member-lime); --booking-accent-soft: color-mix(in srgb, var(--member-lime) 16%, var(--member-surface)); --booking-border: var(--member-line-strong); }
-.booking-page .booking-hero { position: relative; isolation: isolate; grid-template-columns: minmax(0, 1.06fr) minmax(300px, .82fr); gap: clamp(24px, 4vw, 62px); margin: 0 0 24px; padding: clamp(28px, 5vw, 56px); overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 26px; color: #f4f6ef; background: linear-gradient(105deg, rgba(12,39,34,.94) 0%, rgba(12,39,34,.8) 52%, rgba(12,39,34,.38) 100%), url('./assets/40love-courts-sunset.jpeg') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.14); }
+.booking-page .booking-hero { position: relative; isolation: isolate; grid-template-columns: minmax(0, 1.06fr) minmax(300px, .82fr); gap: clamp(24px, 4vw, 62px); margin: 0 0 24px; padding: clamp(28px, 5vw, 56px); overflow: hidden; border: 1px solid rgba(255,255,255,.14); border-radius: 26px; color: #f4f6ef; background: linear-gradient(105deg, rgba(12,39,34,.94) 0%, rgba(12,39,34,.8) 52%, rgba(12,39,34,.38) 100%), url('./assets/40love-courts-sunset.webp') center 58% / cover; box-shadow: 0 22px 55px rgba(11,34,26,.14); }
 .booking-page .booking-hero-copy { position: relative; z-index: 2; padding: 5px 0; }
 .booking-page .booking-kicker { color: rgba(244,247,237,.78); font-size: 10px; letter-spacing: .14em; }
 .booking-page .booking-title { max-width: 680px; color: #fbfcf7; font-size: clamp(48px, 6.2vw, 76px); }
@@ -482,7 +482,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 
 /* Matchmaking: API-backed sessions and modals, with a more legible editorial shell. */
 .mm-page { --ink: var(--member-ink); --muted: var(--member-muted); min-height: 100vh; color: var(--member-ink); }
-.mm-page .mm-hero { min-height: 360px; display: flex; align-items: end; padding: 118px max(24px, calc((100% - 1220px) / 2)) 48px; background: linear-gradient(90deg, rgba(8,28,24,.9), rgba(8,28,24,.64) 55%, rgba(8,28,24,.34)), url('./assets/40love-court-walkway.jpeg') center 54% / cover; }
+.mm-page .mm-hero { min-height: 360px; display: flex; align-items: end; padding: 118px max(24px, calc((100% - 1220px) / 2)) 48px; background: linear-gradient(90deg, rgba(8,28,24,.9), rgba(8,28,24,.64) 55%, rgba(8,28,24,.34)), url('./assets/40love-court-walkway.webp') center 54% / cover; }
 .mm-page .mm-hero::after { width: 420px; height: 420px; border-color: rgba(240,248,230,.22); box-shadow: 0 0 0 38px rgba(240,248,230,.035), 0 0 0 76px rgba(240,248,230,.025); }
 .mm-page .mm-hero-inner { width: min(1220px, 100%); margin: 0 auto; }
 .mm-page .mm-hero-eyebrow { color: #cce287; font-size: 9px; letter-spacing: .2em; }
@@ -549,7 +549,7 @@ body:has(.fortylove-site, .club-detail-page, .booking-page, .my-bookings-page, .
 
 /* Clerk login and registration use one split editorial frame; Clerk remains untouched. */
 .auth-bg-page { position: relative; display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(420px, .92fr); align-items: stretch; gap: clamp(16px, 3vw, 36px); min-height: 100vh; padding: 22px; color: var(--member-ink); background: var(--member-bg); }
-.member-auth-story { position: relative; display: flex; min-height: min(820px, calc(100vh - 44px)); flex-direction: column; justify-content: space-between; padding: clamp(28px, 4vw, 56px); overflow: hidden; border-radius: 26px; color: #f8faf3; background: linear-gradient(180deg, rgba(8,29,25,.2), rgba(8,29,25,.84)), url('./assets/40love-courts-sunset.jpeg') center 58% / cover; box-shadow: var(--member-shadow); }
+.member-auth-story { position: relative; display: flex; min-height: min(820px, calc(100vh - 44px)); flex-direction: column; justify-content: space-between; padding: clamp(28px, 4vw, 56px); overflow: hidden; border-radius: 26px; color: #f8faf3; background: linear-gradient(180deg, rgba(8,29,25,.2), rgba(8,29,25,.84)), url('./assets/40love-courts-sunset.webp') center 58% / cover; box-shadow: var(--member-shadow); }
 .member-auth-story::after { position: absolute; inset: auto 0 0; height: 52%; content: ''; background: linear-gradient(0deg, rgba(7,25,22,.46), transparent); pointer-events: none; }
 .member-auth-story > * { position: relative; z-index: 1; }
 .member-auth-story-kicker { display: inline-flex; align-items: center; gap: 10px; color: rgba(248,250,243,.88); font-size: 9px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }

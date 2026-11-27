@@ -1,9 +1,9 @@
 import Icon from './AdminIcon'
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import logoDark from '../assets/40love-logo-dark.png'
-import { AdminDialog } from './AdminUI'
+import { AdminDialog, StatePanel } from './AdminUI'
 import './admin.css'
 import { AdminLocaleContext } from './AdminLocale'
 
@@ -110,7 +110,7 @@ export default function AdminLayout() {
                 <button type="button" className="admin-language-button" lang={isArabic ? 'en' : 'ar'} onClick={toggleLocale}>{copy.language}</button>
               </div>
             </header>
-            <main id="admin-content" className="admin-content" tabIndex={-1}><Outlet /></main>
+            <main id="admin-content" className="admin-content" tabIndex={-1}><Suspense fallback={<StatePanel loading label={document.documentElement.lang === 'ar' ? 'جارٍ التحميل…' : 'Loading…'} />}><Outlet /></Suspense></main>
             <footer className="admin-footer"><span>© {new Date().getFullYear()} 40 Love Padel Club &amp; Cafe</span><div><Link to="/terms-of-service">{isArabic ? 'شروط الخدمة' : 'Terms of Service'}</Link><Link to="/privacy-policy">{isArabic ? 'سياسة الخصوصية' : 'Privacy Policy'}</Link></div></footer>
           </section>
         </div>

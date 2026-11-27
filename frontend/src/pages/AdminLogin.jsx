@@ -5,7 +5,7 @@ import { useAuthPreferences } from '../authPreferences'
 import { authPageUrl, destinationFor, isAdminPath, isAdminUser, requestedPath, safeReturnPath } from '../authRouting'
 import { clerkAppearance } from '../clerkAppearance'
 import AuthShell, { AuthStatus } from '../components/AuthShell'
-import entrance from '../assets/40love-club-exterior-sunset.jpeg'
+import entrance from '../assets/40love-club-exterior-sunset.webp'
 
 const COPY = {
   en: {

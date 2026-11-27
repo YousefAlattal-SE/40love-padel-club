@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { useAuth } from './auth'
 import { FORTYLOVE_CONTENT as C } from './content'
+import { MemberLoading } from './pages/MemberStates'
 import logo from './assets/40love-logo-dark.png'
 import './booking.css'
 import './club-foundation.css'
@@ -265,7 +266,9 @@ export default function Layout() {
     <div ref={shell} className="member-club member-club--editorial">
       <MemberHeader locale={locale} theme={theme} onLocale={toggleLocale} onTheme={toggleTheme} auth={auth} />
       <main id="member-main" tabIndex={-1} className={editorial ? undefined : 'member-pages'}>
-        <Outlet context={{ locale, theme }} />
+        <Suspense fallback={<MemberLoading label={locale === 'ar' ? 'جارٍ التحميل…' : 'Loading…'} />}>
+          <Outlet context={{ locale, theme }} />
+        </Suspense>
       </main>
       <MemberFooter locale={locale} auth={auth} />
     </div>
