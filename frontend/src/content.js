@@ -2,6 +2,9 @@ import clubCourtCoffee from './assets/40love-court-coffee.jpeg'
 import clubCourtWalkway from './assets/40love-court-walkway.jpeg'
 import clubExteriorSunset from './assets/40love-club-exterior-sunset.jpeg'
 import clubExteriorDay from './assets/40love-club-exterior-day.jpeg'
+import clubCourtsSunset from './assets/40love-courts-sunset.jpeg'
+import clubCourtsTerrace from './assets/40love-courts-terrace.jpeg'
+import clubLoungeInterior from './assets/40love-lounge-interior.jpeg'
 
 export const FORTYLOVE_CONTENT = {
   brand: {
@@ -81,9 +84,12 @@ export const FORTYLOVE_CONTENT = {
   ],
   gallery: [
     { image: clubCourtWalkway, caption: { en: 'Between courts', ar: 'بين الملاعب' }, position: '50% 54%', alt: 'Walkway between the Padel courts', altAr: 'الممر بين ملاعب البادل' },
+    { image: clubCourtsSunset, caption: { en: 'Sunset over the courts', ar: 'الغروب فوق الملاعب' }, position: '50% 56%', alt: 'Aerial view of the blue Padel courts and floodlights at sunset', altAr: 'منظر علوي لملاعب البادل الزرقاء وأعمدة الإضاءة وقت الغروب' },
     { image: clubExteriorDay, caption: { en: 'The club entrance', ar: 'مدخل النادي' }, position: '50% 56%', alt: '40 Love Padel Club exterior in daylight', altAr: 'الواجهة الخارجية لنادي 40 Love نهارًا' },
     { image: clubExteriorSunset, caption: { en: 'The terrace at dusk', ar: 'الشرفة عند الغروب' }, position: '50% 33%', alt: '40 Love club terrace and sign at sunset', altAr: 'شرفة نادي 40 Love واللافتة وقت الغروب' },
+    { image: clubCourtsTerrace, caption: { en: 'Tables by court 1', ar: 'طاولات بجانب الملعب ١' }, position: '58% 60%', alt: 'Outdoor terrace with tables and chairs beside court 1 on a sunny day', altAr: 'شرفة خارجية بطاولات وكراسٍ بجانب الملعب رقم ١ في يوم مشمس' },
     { image: clubCourtCoffee, caption: { en: 'Courtside coffee', ar: 'قهوة بجانب الملعب' }, position: '42% 52%', alt: '40 Love coffee beside the Padel court', altAr: 'قهوة 40 Love بجانب ملعب البادل' },
+    { image: clubLoungeInterior, caption: { en: 'The café lounge', ar: 'صالة المقهى' }, position: '22% 55%', alt: 'Indoor café lounge with orange chairs under warm pendant lights', altAr: 'صالة المقهى الداخلية بكراسٍ برتقالية تحت إضاءة معلّقة دافئة' },
   ],
   testimonials: [
     { quote: { en: 'The late hours are a game changer. I can actually play after work without rushing.', ar: 'المواعيد الليلية غيّرت اللعبة. أقدر ألعب بعد الدوام بدون استعجال.' }, name: 'Omar K.', role: 'Padel member', rating: 5 },
