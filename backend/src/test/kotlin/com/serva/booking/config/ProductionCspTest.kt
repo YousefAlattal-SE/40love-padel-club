@@ -36,12 +36,16 @@ class ProductionCspTest {
             .associate { it.substringBefore(' ') to it.substringAfter(' ', "") }
 
     @Test
-    fun `scripts are limited to the site, the Clerk instance and its bot challenge`() {
+    fun `scripts are limited to the site, the Clerk instance, its bot challenge and fraud protection`() {
         val policy = directives(config.productionCspReportOnly(issuer))
-        assertEquals("'self' $issuer https://challenges.cloudflare.com", policy.getValue("script-src"))
-        assertTrue(policy.getValue("connect-src").split(' ').containsAll(listOf("'self'", issuer)))
-        // Clerk's bot challenge and the Google Maps embed on the home page (item 14.3).
-        assertEquals("https://challenges.cloudflare.com https://www.google.com", policy.getValue("frame-src"))
+        assertEquals("'self' $issuer https://challenges.cloudflare.com https://*.protect.clerk.com", policy.getValue("script-src"))
+        // Clerk's fraud protection is served on ports other than 443 (Clerk CSP guide).
+        assertEquals("'self' $issuer https://*.protect.clerk.com:*", policy.getValue("connect-src"))
+        // Clerk's bot challenge and fraud protection, and the Google Maps embed on the home page (item 14.3).
+        assertEquals(
+            "https://challenges.cloudflare.com https://*.protect.clerk.com https://www.google.com",
+            policy.getValue("frame-src"),
+        )
         assertTrue(policy.getValue("img-src").split(' ')
             .containsAll(listOf("'self'", "https://img.clerk.com", "https://images.unsplash.com")))
         assertEquals("'self' blob:", policy.getValue("worker-src"))
@@ -65,7 +69,7 @@ class ProductionCspTest {
         val raw = config.productionCspReportOnly("")
         assertFalse(raw.contains("  "))
         assertFalse(raw.contains("null"))
-        assertEquals("'self' https://challenges.cloudflare.com", directives(raw).getValue("script-src"))
+        assertEquals("'self' https://challenges.cloudflare.com https://*.protect.clerk.com", directives(raw).getValue("script-src"))
     }
 
     @Test
