@@ -1,4 +1,4 @@
-import clubCourtCoffee from './assets/40love-court-coffee.jpeg'
+﻿import clubCourtCoffee from './assets/40love-court-coffee.jpeg'
 import clubCourtWalkway from './assets/40love-court-walkway.jpeg'
 import clubExteriorSunset from './assets/40love-club-exterior-sunset.jpeg'
 import clubExteriorDay from './assets/40love-club-exterior-day.jpeg'
