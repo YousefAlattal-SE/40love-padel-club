@@ -161,7 +161,7 @@ fun verifyDisposableTestDatabase(task: Test) {
 	task.environment("JWT_SECRET", Base64.getUrlEncoder().withoutPadding().encodeToString(key))
 }
 
-val databaseTest by tasks.registering(Test::class) {
+val databaseTest = tasks.register<Test>("databaseTest") {
 	description = "Runs @DatabaseIntegrationTest classes against the disposable 127.0.0.1:55434 container only."
 	group = "verification"
 	testClassesDirs = sourceSets.test.get().output.classesDirs
@@ -175,7 +175,7 @@ val databaseTest by tasks.registering(Test::class) {
 
 val frontendDir = layout.projectDirectory.dir("../frontend")
 val frontendOutput = layout.buildDirectory.dir("generated/vite")
-val buildFrontend by tasks.registering(Exec::class) {
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
 	workingDir(frontendDir)
 	val npm = if (System.getProperty("os.name").startsWith("Windows")) "npm.cmd" else "npm"
 	commandLine(npm, "run", "build", "--", "--outDir", frontendOutput.get().asFile.absolutePath, "--emptyOutDir")
@@ -184,7 +184,7 @@ val buildFrontend by tasks.registering(Exec::class) {
 	outputs.upToDateWhen { false }
 }
 
-// The old checked-in static snapshot is never an input to the runtime classpath.
+// Only the fresh Vite build is packaged; nothing under src/main/resources/static is ever shipped.
 sourceSets.main { resources.exclude("static/**") }
 tasks.processResources {
 	from(buildFrontend) { into("static") }
