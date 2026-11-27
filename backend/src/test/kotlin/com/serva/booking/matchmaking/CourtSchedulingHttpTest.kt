@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.DefaultMockMvcBuilder
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
 import org.springframework.transaction.annotation.Transactional
+import com.serva.booking.testsupport.AdminPrincipal
 import com.serva.booking.testsupport.DatabaseIntegrationTest
 import org.springframework.web.context.WebApplicationContext
 import java.time.LocalDate
@@ -65,8 +66,8 @@ class CourtSchedulingHttpTest(
         fun request() = patch(url).contentType("application/json").content(body)
         mvc.perform(request()).andExpect(status().isUnauthorized)
         mvc.perform(request().with(user("member").roles("MEMBER"))).andExpect(status().isForbidden)
-        mvc.perform(request().with(user("staff").roles("ADMIN"))).andExpect(status().isOk)
-        fun complete() = patch(url).with(user("staff").roles("ADMIN")).contentType("application/json")
+        mvc.perform(request().with(AdminPrincipal.of(staff))).andExpect(status().isOk)
+        fun complete() = patch(url).with(AdminPrincipal.of(staff)).contentType("application/json")
             .content("""{"status":"completed"}""")
         // The moved match has not started yet, so completing it is refused (security item 6.1).
         mvc.perform(complete()).andExpect(status().isBadRequest)
@@ -98,7 +99,7 @@ class CourtSchedulingHttpTest(
 
         val id = match("published")
         checkSlot("booked")
-        mvc.perform(patch("/api/admin/matchmaking/$id").with(user("staff").roles("ADMIN"))
+        mvc.perform(patch("/api/admin/matchmaking/$id").with(AdminPrincipal.of(staff))
             .contentType("application/json").content("""{"status":"cancelled"}""")).andExpect(status().isOk)
         checkSlot("free")
         val booking = jdbc.queryForObject(
@@ -106,7 +107,7 @@ class CourtSchedulingHttpTest(
                values (?,?,?,?,25) returning id""", Long::class.java, staff, court, start, end
         )!!
         checkSlot("booked")
-        mvc.perform(patch("/api/admin/bookings/$booking/status").with(user("staff").roles("ADMIN"))
+        mvc.perform(patch("/api/admin/bookings/$booking/status").with(AdminPrincipal.of(staff))
             .contentType("application/json").content("""{"status":"cancelled"}""")).andExpect(status().isOk)
         checkSlot("free")
     }
@@ -115,7 +116,7 @@ class CourtSchedulingHttpTest(
     fun `publishing against a completed match returns conflict`() {
         match("completed")
         val id = match("draft")
-        mvc.perform(patch("/api/admin/matchmaking/$id").with(user("staff").roles("ADMIN"))
+        mvc.perform(patch("/api/admin/matchmaking/$id").with(AdminPrincipal.of(staff))
             .contentType("application/json").content("""{"status":"published"}""")).andExpect(status().isConflict)
     }
 }

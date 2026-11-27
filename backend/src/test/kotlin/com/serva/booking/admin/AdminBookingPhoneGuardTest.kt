@@ -16,7 +16,8 @@ class AdminBookingPhoneGuardTest {
     fun `admin cannot confirm a booking when its customer has a blank phone`() {
         val jdbc = mock(JdbcTemplate::class.java)
         `when`(jdbc.queryForObject(anyString(), eq(Int::class.java), eq(91L))).thenReturn(1)
-        val controller = AdminController(jdbc)
+        val audit = mock(AdminAuditService::class.java)
+        val controller = AdminController(jdbc, audit)
 
         assertThrows(PhoneNumberRequiredException::class.java) {
             controller.updateBookingStatus(91L, AdminBookingStatusRequest("confirmed"))
@@ -24,5 +25,6 @@ class AdminBookingPhoneGuardTest {
 
         verify(jdbc).queryForObject(anyString(), eq(Int::class.java), eq(91L))
         verifyNoMoreInteractions(jdbc)
+        org.mockito.Mockito.verifyNoInteractions(audit)
     }
 }
