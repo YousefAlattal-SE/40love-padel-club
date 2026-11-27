@@ -100,20 +100,23 @@ class SecurityConfig(
      * Content-Security-Policy-Report-Only first, so a gap is reported by the browser instead of
      * breaking sign-in; enforce it only after staging shows no violations. Clerk's documented
      * needs: its Frontend API for scripts and XHR, img.clerk.com, the Cloudflare bot challenge
-     * (script + frame), blob workers and runtime-injected styles.
+     * (script + frame), blob workers and runtime-injected styles. Clerk's abuse and fraud protection
+     * runs on *.protect.clerk.com (script, frame, and XHR on ports other than 443, hence `:*`);
+     * a local browser check showed its script and connections blocked without these entries.
      */
     internal fun productionCspReportOnly(issuer: String): String {
         val clerk = issuer.trim().takeIf { it.isNotEmpty() }
         fun sources(vararg values: String?) = values.filterNotNull().joinToString(" ")
+        val clerkProtect = "https://*.protect.clerk.com"
         return listOf(
             "default-src 'self'",
-            "script-src " + sources("'self'", clerk, "https://challenges.cloudflare.com"),
+            "script-src " + sources("'self'", clerk, "https://challenges.cloudflare.com", clerkProtect),
             "style-src 'self' 'unsafe-inline'",
             "img-src " + sources("'self'", "data:", "https://img.clerk.com", "https://images.unsplash.com"),
             "font-src 'self' data:",
-            "connect-src " + sources("'self'", clerk),
-            // Clerk's bot challenge and the Google Maps embed on the home page (item 14.3).
-            "frame-src https://challenges.cloudflare.com https://www.google.com",
+            "connect-src " + sources("'self'", clerk, "$clerkProtect:*"),
+            // Clerk's bot challenge and fraud protection, and the Google Maps embed on the home page (item 14.3).
+            "frame-src https://challenges.cloudflare.com $clerkProtect https://www.google.com",
             "worker-src 'self' blob:",
             "object-src 'none'",
             "base-uri 'self'",
