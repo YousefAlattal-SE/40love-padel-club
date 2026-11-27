@@ -61,6 +61,20 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         } finally { pool.shutdownNow() }
     }
 
+    /**
+     * Admin service calls run as an authenticated admin, as they do behind the admin routes: every admin
+     * change is audited against a real user (security item 8.2). Set per call so it also works in race threads.
+     */
+    private fun <T> asAdmin(block: () -> T): T {
+        org.springframework.security.core.context.SecurityContextHolder.getContext().authentication =
+            com.serva.booking.testsupport.AdminPrincipal.token(users.first())
+        try { return block() } finally { org.springframework.security.core.context.SecurityContextHolder.clearContext() }
+    }
+    private fun cancelMatch(id: Long) = asAdmin { service.cancelMatch(id) }
+    private fun updateMatch(id: Long, req: UpdateMatchRequest) = asAdmin { service.updateMatch(id, req) }
+    private fun markReservationPaid(adminId: Long, reservationId: Long, paid: Boolean, lifecycleId: UUID) =
+        asAdmin { service.markReservationPaid(adminId, reservationId, paid, lifecycleId) }
+
     private fun queue(i: Int) = service.joinWaitlist(users[i], match)
     private fun join(i: Int) = service.joinMatch(users[i], match)
     private fun confirmed() = id("select count(*) from match_reservations where match_id=? and status='confirmed'", match)
@@ -124,7 +138,7 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         assertEquals("removed", state(2))
         queue(3)
         val delayed = withdrawal(3)
-        service.cancelMatch(match)
+        cancelMatch(match)
         mvc.perform(delayed).andExpect(status().isBadRequest)
         assertEquals("removed", state(3))
         assertEquals(0L, confirmed())
@@ -186,7 +200,7 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
 
     @Test fun acceptingOfferForPreviouslyCancelledSeatRotatesItsIdentity() {
         val first = join(0)
-        service.markReservationPaid(users[1], first.id, true, first.lifecycleId)
+        markReservationPaid(users[1], first.id, true, first.lifecycleId)
         service.cancelReservation(users[0], first.id, first.lifecycleId)
         val seat = join(1)
         join(2)
@@ -262,7 +276,7 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         mvc.perform(post("/api/admin/matchmaking/$match/cancel").with(asMember(2))).andExpect(status().isForbidden)
         mvc.perform(action("accept", 4, offerId(2))).andExpect(status().isConflict)
         assertEquals("offered", state(2))
-        service.cancelMatch(match)
+        cancelMatch(match)
         assertEquals("removed", state(2))
         assertEquals(0L, confirmed())
     }
@@ -275,20 +289,20 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         assertEquals("offered", state(3))
         // Completion is only allowed once the match has started (security item 6.1).
         assertThrows(BookingRuleException::class.java) {
-            service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
+            updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
         }
         moveToStartedSlot()
-        service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
+        updateMatch(match, UpdateMatchRequest(status = MatchStatus.completed))
         assertEquals("removed", state(3))
         assertEquals(1L, confirmed())
         assertThrows(BookingRuleException::class.java) { join(4) }
     }
 
     @Test fun capacityEditDuringJoin() {
-        service.updateMatch(match, UpdateMatchRequest(maxPlayers = 3))
+        updateMatch(match, UpdateMatchRequest(maxPlayers = 3))
         join(0)
         join(1)
-        race({ try { service.updateMatch(match, UpdateMatchRequest(maxPlayers = 2)) } catch (_: BookingRuleException) {} },
+        race({ try { updateMatch(match, UpdateMatchRequest(maxPlayers = 2)) } catch (_: BookingRuleException) {} },
             { try { join(2) } catch (_: MatchFullException) {} })
         assertEquals(confirmed(), id("select max_players from matches where id=?", match))
     }
@@ -325,7 +339,7 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
         offer()
         // PostgreSQL rejects a negative price after the participant cleanup has run.
         assertThrows(org.springframework.dao.DataIntegrityViolationException::class.java) {
-            service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.cancelled,
+            updateMatch(match, UpdateMatchRequest(status = MatchStatus.cancelled,
                 pricePerPlayer = java.math.BigDecimal("-1")))
         }
         assertEquals(1L, confirmed())
@@ -360,7 +374,7 @@ class MatchLifecycleTest(@Autowired val service: MatchService, @Autowired val db
 
     @Test fun cancelDuringAcceptance() {
         offer()
-        race({ service.updateMatch(match, UpdateMatchRequest(status = MatchStatus.cancelled)) },
+        race({ updateMatch(match, UpdateMatchRequest(status = MatchStatus.cancelled)) },
             { try { service.acceptWaitlistOffer(users[2], match, offerId(2)).getOrThrow() } catch (_: org.springframework.web.server.ResponseStatusException) {} })
         assertEquals(0L, confirmed())
         assertEquals(0L, id("select count(*) from match_waitlist where match_id=? and status in ('waiting','offered')", match))

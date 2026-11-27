@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.jdbc.core.JdbcTemplate
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user
+import com.serva.booking.testsupport.AdminPrincipal
 import org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
@@ -30,7 +30,7 @@ import java.time.ZoneOffset
 class AdminRevenueTest(@Autowired context: WebApplicationContext, @Autowired private val jdbc: JdbcTemplate) {
     private val mvc = MockMvcBuilders.webAppContextSetup(context)
         .apply<DefaultMockMvcBuilder>(springSecurity()).build()
-    private val staff = user("staff").roles("ADMIN")
+    private val staff by lazy { AdminPrincipal.of(AdminPrincipal.insertAdmin(jdbc, "revenue-staff")) }
 
     private fun revenueToday(): BigDecimal {
         val body = mvc.perform(get("/api/admin/overview").with(staff)).andExpect(status().isOk).andReturn().response.contentAsString

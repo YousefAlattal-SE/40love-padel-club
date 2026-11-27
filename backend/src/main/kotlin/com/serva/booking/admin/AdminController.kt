@@ -91,7 +91,7 @@ data class AdminCustomerResponse(
 @RestController
 @RequestMapping("/api/admin")
 @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
-class AdminController(private val jdbc: JdbcTemplate) {
+class AdminController(private val jdbc: JdbcTemplate, private val audit: AdminAuditService) {
 
     private val zone = ZoneId.of("Asia/Amman")
 
@@ -215,10 +215,12 @@ class AdminController(private val jdbc: JdbcTemplate) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Booking not found")
         }
 
+        audit.record("booking.status", "booking", id, mapOf("status" to status))
         return mapOf("success" to true, "id" to id, "status" to status)
     }
 
     @PatchMapping("/bookings/{id}/payment")
+    @org.springframework.transaction.annotation.Transactional
     fun updateBookingPayment(
         @PathVariable id: Long,
         @RequestBody request: AdminPaymentRequest,
@@ -253,6 +255,10 @@ class AdminController(private val jdbc: JdbcTemplate) {
             }
         }
 
+        audit.record(
+            "booking.payment", "booking", id,
+            mapOf("paid" to request.paid, "paymentMethod" to if (request.paid) request.paymentMethod.trim().lowercase() else null),
+        )
         return mapOf("success" to true, "id" to id, "paid" to request.paid)
     }
 
@@ -269,6 +275,7 @@ class AdminController(private val jdbc: JdbcTemplate) {
     }
 
     @PatchMapping("/courts/{id}/availability")
+    @org.springframework.transaction.annotation.Transactional
     fun setCourtAvailability(
         @PathVariable id: Long,
         @RequestBody request: AdminCourtAvailabilityRequest,
@@ -283,6 +290,7 @@ class AdminController(private val jdbc: JdbcTemplate) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Court not found")
         }
 
+        audit.record("court.availability", "court", id, mapOf("available" to request.available))
         return mapOf("success" to true, "id" to id, "available" to request.available)
     }
 
@@ -301,6 +309,7 @@ class AdminController(private val jdbc: JdbcTemplate) {
     }
 
     @PutMapping("/pricing/{sport}")
+    @org.springframework.transaction.annotation.Transactional
     fun updatePricing(
         @PathVariable sport: String,
         @RequestBody request: AdminPricingRequest,
@@ -337,6 +346,17 @@ class AdminController(private val jdbc: JdbcTemplate) {
         if (changed == 0) {
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Pricing row not found")
         }
+
+        audit.record(
+            "pricing.update", "pricing", null,
+            mapOf(
+                "sport" to sportName,
+                "daytimePrice" to request.daytimePrice,
+                "daytimeTwoHourPrice" to request.daytimeTwoHourPrice,
+                "eveningPrice" to request.eveningPrice,
+                "eveningTwoHourPrice" to request.eveningTwoHourPrice,
+            ),
+        )
 
         return pricing().first { it.sport == sportName }
     }

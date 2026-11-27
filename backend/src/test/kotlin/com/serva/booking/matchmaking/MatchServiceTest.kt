@@ -52,7 +52,8 @@ class MatchServiceTest {
             waitlistRepository,
             courtRepository,
             bookingRepository,
-            jdbcTemplate
+            jdbcTemplate,
+            mock(com.serva.booking.admin.AdminAuditService::class.java),
         )
 
         `when`(courtRepository.findById(courtId)).thenReturn(Optional.of(testCourt))

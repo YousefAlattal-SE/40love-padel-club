@@ -25,6 +25,7 @@ class MatchService(
     private val courtRepo: CourtRepository,
     private val bookingRepo: BookingRepository,
     private val jdbc: JdbcTemplate,
+    private val audit: com.serva.booking.admin.AdminAuditService,
 ) {
     private val zone = ZoneId.of("Asia/Amman")
 
@@ -113,6 +114,7 @@ class MatchService(
                 createdBy = adminId,
             )
         )
+        audit.record("match.create", "match", match.id, mapOf("status" to match.status.name, "courtId" to match.courtId))
         return toMatchResponse(match)
     }
 
@@ -189,8 +191,22 @@ class MatchService(
         val capacityIncreased = newMaxPlayers > match.maxPlayers
         val saved = matchRepo.saveAndFlush(updated)
         if (capacityIncreased && saved.status == MatchStatus.published) offerSpotToNextOnWaitlist(matchId)
+        audit.record("match.update", "match", matchId, mapOf("fields" to updatedFields(req), "status" to saved.status.name))
         return toMatchResponse(saved)
     }
+
+    /** Names of the fields an admin update sets; values are not audited (descriptions are free text). */
+    private fun updatedFields(req: UpdateMatchRequest): List<String> = listOfNotNull(
+        "sport".takeIf { req.sport != null },
+        "courtId".takeIf { req.courtId != null },
+        "startsAt".takeIf { req.startsAt != null },
+        "endsAt".takeIf { req.endsAt != null },
+        "maxPlayers".takeIf { req.maxPlayers != null },
+        "pricePerPlayer".takeIf { req.pricePerPlayer != null },
+        "skillLevel".takeIf { req.skillLevel != null },
+        "description".takeIf { req.description != null },
+        "status".takeIf { req.status != null },
+    )
 
     // ─── Admin: publish a match ────────────────────────────────────────────────
 
@@ -205,7 +221,9 @@ class MatchService(
 
         match.status = MatchStatus.published
         match.updatedAt = Instant.now()
-        return toMatchResponse(matchRepo.saveAndFlush(match))
+        val published = matchRepo.saveAndFlush(match)
+        audit.record("match.publish", "match", matchId)
+        return toMatchResponse(published)
     }
 
     // ─── Admin: cancel a match ─────────────────────────────────────────────────
@@ -221,7 +239,9 @@ class MatchService(
         closeParticipants(matchId, MatchStatus.cancelled)
         match.status = MatchStatus.cancelled
         match.updatedAt = Instant.now()
-        return toMatchResponse(matchRepo.saveAndFlush(match))
+        val cancelled = matchRepo.saveAndFlush(match)
+        audit.record("match.cancel", "match", matchId)
+        return toMatchResponse(cancelled)
     }
 
     // ─── Member: join a match ──────────────────────────────────────────────────
@@ -599,6 +619,10 @@ class MatchService(
         }
         reservation.updatedAt = Instant.now()
         reservationRepo.saveAndFlush(reservation)
+        audit.record(
+            "match_reservation.payment", "match_reservation", reservationId,
+            mapOf("paid" to paid, "matchId" to reservation.matchId),
+        )
 
         // Fetch user info for the response
         val (fullName, email, phone) = jdbc.query(

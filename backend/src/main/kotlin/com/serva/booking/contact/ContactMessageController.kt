@@ -43,7 +43,10 @@ data class ContactMessageResponse(
 
 @RestController
 @RequestMapping("/api")
-class ContactMessageController(private val jdbc: JdbcTemplate) {
+class ContactMessageController(
+    private val jdbc: JdbcTemplate,
+    private val audit: com.serva.booking.admin.AdminAuditService,
+) {
     private val mapper: RowMapper<ContactMessageResponse> = { rs, _ ->
         ContactMessageResponse(
             id = rs.getLong("id"),
@@ -99,6 +102,7 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
     )
 
     @PatchMapping("/admin/contact-messages/{id}")
+    @org.springframework.transaction.annotation.Transactional
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')") // security item 9.1
     fun updateStatus(
         @PathVariable id: Long,
@@ -108,12 +112,14 @@ class ContactMessageController(private val jdbc: JdbcTemplate) {
         if (status !in setOf("new", "read", "replied", "archived")) {
             throw ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported message status")
         }
-        return jdbc.query(
+        val updated = jdbc.query(
             """
             UPDATE contact_messages SET status = ? WHERE id = ?
             RETURNING id, name, phone, sport, legacy_sport, preferred_time, message, status, created_at
             """.trimIndent(),
             mapper, status, id,
         ).firstOrNull() ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "Contact message not found")
+        audit.record("contact_message.status", "contact_message", id, mapOf("status" to status))
+        return updated
     }
 }

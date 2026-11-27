@@ -78,6 +78,10 @@ class BookingApplicationTests {
 			column("public.match_waitlist", "lifecycle_id"),
 			column("public.match_reservations", "lifecycle_id"),
 		),
+		12 to listOf(
+			relation("public.idx_audit_logs_created"),
+			relation("public.idx_audit_logs_entity"),
+		),
 	)
 
 	/** Highest `V<n>__*.sql` on the classpath, so adding V12 forces this test to be extended. */
