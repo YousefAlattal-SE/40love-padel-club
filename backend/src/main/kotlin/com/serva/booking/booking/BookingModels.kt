@@ -10,7 +10,8 @@ data class CreateBookingRequest(
     val courtId: Long,
     val startsAt: OffsetDateTime,
     @field:Min(1, message = "minimum booking is 1 hour")
-    @field:Max(18, message = "too many hours")
+    // Club decision B-3: one booking covers at most 3 hours; longer sessions go through staff.
+    @field:Max(BookingService.MAX_BOOKING_HOURS, message = "a booking can be at most 3 hours")
     val hours: Int,
 )
 

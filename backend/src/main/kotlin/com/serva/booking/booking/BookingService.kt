@@ -31,6 +31,10 @@ class BookingService(
     companion object {
         const val MAX_DAYS_AHEAD = 7L
         const val CANCEL_CUTOFF_HOURS = 4L   // free cancellation up to 4 hours before start
+
+        // Club decision B-3: limits that stop one account from holding the courts for everyone.
+        const val MAX_BOOKING_HOURS = 3L
+        const val MAX_UPCOMING_BOOKINGS = 3L
     }
 
     @Transactional
@@ -44,7 +48,8 @@ class BookingService(
         val start = req.startsAt.toInstant()
         val end = start.plus(req.hours.toLong(), ChronoUnit.HOURS)
 
-        if (!start.isAfter(Instant.now())) throw BookingRuleException("Start time must be in the future")
+        val now = Instant.now()
+        if (!start.isAfter(now)) throw BookingRuleException("Start time must be in the future")
 
         // The midnight-3 AM slots belong to the previous club day, so shift back by the opening hour.
         val clubDay = start.atZone(zone).minusHours(AvailabilityService.FIRST_HOUR.toLong()).toLocalDate()
@@ -56,6 +61,8 @@ class BookingService(
         val rate = pricing.rates()[Sport.padel]
             ?: throw BookingRuleException("No pricing configured for Padel")
         val quote = calculator.quote(start, end, rate, pricing.offPeakWindows())
+
+        requireMemberQuota(user.id, start, end, now)
 
         // Friendly check first; the database exclusion constraint is the safety net for simultaneous clicks
         if (bookings.countOverlapping(court.id, start, end, BookingStatus.cancelled) > 0) throw SlotTakenException()
@@ -75,6 +82,22 @@ class BookingService(
             )
         )
         return toResponse(saved, court)
+    }
+
+    /**
+     * Club decision B-3: at most [MAX_UPCOMING_BOOKINGS] upcoming bookings per member, and never two
+     * at the same time. The member row is locked first, so parallel requests are checked one by one.
+     */
+    private fun requireMemberQuota(userId: Long, start: Instant, end: Instant, now: Instant) {
+        bookings.lockMember(userId)
+        if (bookings.countMemberOverlapping(userId, start, end, BookingStatus.confirmed) > 0) {
+            throw BookingRuleException("You already have a booking at this time")
+        }
+        if (bookings.countUpcomingForMember(userId, BookingStatus.confirmed, now) >= MAX_UPCOMING_BOOKINGS) {
+            throw BookingRuleException(
+                "You can hold at most $MAX_UPCOMING_BOOKINGS upcoming bookings. Cancel one or contact the club."
+            )
+        }
     }
 
     private fun requireContactPhone(userId: Long) {

@@ -8,6 +8,9 @@ import { confirmBookingWithSavedPhone, isPhoneNumberRequiredError, persistContac
 import { normalizeContactPhone } from '../contactPhone'
 import { formatTime } from '../format'
 
+// Club decision B-3; the server enforces the same limit.
+const MAX_BOOKING_HOURS = 3
+
 const SPORT_DETAILS = {
     padel: { en: 'Padel', ar: 'بادل' },
 }
@@ -187,12 +190,12 @@ export default function Book() {
         setError('')
     }
 
-    // Count the consecutive free slots after the chosen slot.
+    // Count the consecutive free slots after the chosen slot, up to the club's 3-hour booking limit.
     const maxHours = useMemo(() => {
         if (!selected) return 0
         const { slots } = selected.court
         let count = 0
-        while (selected.index + count < slots.length && slots[selected.index + count].status === 'free') count++
+        while (count < MAX_BOOKING_HOURS && selected.index + count < slots.length && slots[selected.index + count].status === 'free') count++
         return count
     }, [selected])
 

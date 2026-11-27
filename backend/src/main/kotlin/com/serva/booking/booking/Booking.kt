@@ -56,6 +56,46 @@ interface BookingRepository : JpaRepository<Booking, Long> {
     fun findByUserIdOrderByStartsAtDesc(userId: Long): List<Booking>
 
     /**
+     * Serialises a member's booking creation (club decision B-3): concurrent requests for the same
+     * member wait here, so the upcoming-count and overlap checks cannot both pass in a race.
+     * NO KEY UPDATE still lets other rows reference the member.
+     */
+    @Query(value = "SELECT id FROM users WHERE id = :userId FOR NO KEY UPDATE", nativeQuery = true)
+    fun lockMember(@Param("userId") userId: Long): List<Long>
+
+    /** The member's bookings with [status] that have not ended yet. */
+    @Query(
+        """
+        select count(b) from Booking b
+        where b.userId = :userId
+          and b.status = :status
+          and b.endsAt > :now
+        """
+    )
+    fun countUpcomingForMember(
+        @Param("userId") userId: Long,
+        @Param("status") status: BookingStatus,
+        @Param("now") now: Instant,
+    ): Long
+
+    /** The member's bookings with [status] that overlap [start, end) on any court. */
+    @Query(
+        """
+        select count(b) from Booking b
+        where b.userId = :userId
+          and b.status = :status
+          and b.startsAt < :end
+          and b.endsAt > :start
+        """
+    )
+    fun countMemberOverlapping(
+        @Param("userId") userId: Long,
+        @Param("start") start: Instant,
+        @Param("end") end: Instant,
+        @Param("status") status: BookingStatus,
+    ): Long
+
+    /**
      * How many bookings overlap [start, end) on this court, ignoring those with status [excluded]
      * (pass BookingStatus. Canceled). The status is a parameter, not a literal in the query,
      * because Hibernate would cast a literal to the wrong PostgreSQL enum type name.
