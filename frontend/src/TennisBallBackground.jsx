@@ -175,6 +175,9 @@ export default function TennisBallBackground({ className = '' }) {
     ctx.scale(dpr, dpr)
     // Re-position balls that flew off-screen after resize
     const state = stateRef.current
+    // Cache the CSS size so the frame loop never forces a layout read.
+    state.width = width
+    state.height = height
     state.balls.forEach((b) => {
       b.x = Math.min(Math.max(b.x, b.r), width  - b.r)
       b.y = Math.min(Math.max(b.y, b.r), height - b.r)
@@ -187,8 +190,8 @@ export default function TennisBallBackground({ className = '' }) {
     if (!canvas) return
     const state  = stateRef.current
     const ctx    = canvas.getContext('2d')
-    const W      = canvas.getBoundingClientRect().width
-    const H      = canvas.getBoundingClientRect().height
+    const W      = state.width
+    const H      = state.height
     const cfg    = THEME[state.theme]
     const frameScale = Math.min(Math.max(deltaTime / (1000 / 60), 0), 3)
 

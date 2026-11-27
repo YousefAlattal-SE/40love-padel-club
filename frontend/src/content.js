@@ -1,10 +1,10 @@
-﻿import clubCourtCoffee from './assets/40love-court-coffee.jpeg'
-import clubCourtWalkway from './assets/40love-court-walkway.jpeg'
-import clubExteriorSunset from './assets/40love-club-exterior-sunset.jpeg'
-import clubExteriorDay from './assets/40love-club-exterior-day.jpeg'
-import clubCourtsSunset from './assets/40love-courts-sunset.jpeg'
-import clubCourtsTerrace from './assets/40love-courts-terrace.jpeg'
-import clubLoungeInterior from './assets/40love-lounge-interior.jpeg'
+﻿import clubCourtCoffee from './assets/40love-court-coffee.webp'
+import clubCourtWalkway from './assets/40love-court-walkway.webp'
+import clubExteriorSunset from './assets/40love-club-exterior-sunset.webp'
+import clubExteriorDay from './assets/40love-club-exterior-day.webp'
+import clubCourtsSunset from './assets/40love-courts-sunset.webp'
+import clubCourtsTerrace from './assets/40love-courts-terrace.webp'
+import clubLoungeInterior from './assets/40love-lounge-interior.webp'
 
 export const FORTYLOVE_CONTENT = {
   brand: {

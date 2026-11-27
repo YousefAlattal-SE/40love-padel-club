@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, Outlet, useOutletContext, useLocation } from 'react-router-dom'
 import { useAuth } from './auth'
 import { isAdminUser } from './authRouting'
@@ -6,21 +7,29 @@ import AuthBootstrapNotice from './AuthBootstrapNotice'
 import Layout from './Layout'
 import { MemberLoading } from './pages/MemberStates'
 import Home from './pages/Home'
-import ClubLegal from './pages/ClubLegal'
-import Book from './pages/Book'
-import Login from './pages/Login'
-import MyBookings from './pages/MyBookings'
-import Profile from './pages/Profile'
-import Register from './pages/Register'
-import ClubPage from './pages/ClubPage'
-import MatchmakingPage from './pages/Matchmaking'
-import MyMatchmaking from './pages/MyMatchmaking'
-import AdminLogin from './pages/AdminLogin'
-import AdminLayout from './admin/AdminLayout'
-import { AdminBookingsPage, AdminCourtsPage, AdminCustomersPage, AdminContactMessagesPage, AdminOverviewPage, AdminPricingPage } from './admin/AdminPages'
-import { AdminMatchmakingPage } from './admin/AdminMatchmakingPage'
 import { AdminSession } from './admin/AdminUI'
 import ScrollAnimations from './animation/ScrollAnimations'
+
+// Route-level code splitting: only the home page ships in the entry bundle.
+const ClubLegal = lazy(() => import('./pages/ClubLegal'))
+const Book = lazy(() => import('./pages/Book'))
+const Login = lazy(() => import('./pages/Login'))
+const MyBookings = lazy(() => import('./pages/MyBookings'))
+const Profile = lazy(() => import('./pages/Profile'))
+const Register = lazy(() => import('./pages/Register'))
+const ClubPage = lazy(() => import('./pages/ClubPage'))
+const MatchmakingPage = lazy(() => import('./pages/Matchmaking'))
+const MyMatchmaking = lazy(() => import('./pages/MyMatchmaking'))
+const AdminLogin = lazy(() => import('./pages/AdminLogin'))
+const AdminLayout = lazy(() => import('./admin/AdminLayout'))
+const adminPage = (name) => lazy(() => import('./admin/AdminPages').then((m) => ({ default: m[name] })))
+const AdminOverviewPage = adminPage('AdminOverviewPage')
+const AdminBookingsPage = adminPage('AdminBookingsPage')
+const AdminCourtsPage = adminPage('AdminCourtsPage')
+const AdminContactMessagesPage = adminPage('AdminContactMessagesPage')
+const AdminPricingPage = adminPage('AdminPricingPage')
+const AdminCustomersPage = adminPage('AdminCustomersPage')
+const AdminMatchmakingPage = lazy(() => import('./admin/AdminMatchmakingPage').then((m) => ({ default: m.AdminMatchmakingPage })))
 
 function Protected() {
   const context = useOutletContext()
@@ -48,6 +57,7 @@ export default function App() {
         <AuthProvider>
           <div className="app-shell">
             <div className="app-route-content">
+              <Suspense fallback={null}>
               <Routes>
                 {/* Authentication screens use their own frame so no member page shows while a role is verified. */}
                 <Route path="/login" element={<Login />} />
@@ -84,6 +94,7 @@ export default function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </Suspense>
             </div>
           </div>
         </AuthProvider>
